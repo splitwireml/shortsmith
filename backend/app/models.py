@@ -107,6 +107,9 @@ class Pipeline(PipelineBase, table=True):
     created_at: datetime = Field(default_factory=_now)
     active: bool = True
     last_run_at: datetime | None = None
+    # Last analyst attempt (success or failure), for the once-a-day gate;
+    # the analytics cost events remain the record of successful runs.
+    last_analysis_at: datetime | None = None
     # Set on delete: the row stays for video history and cost reports,
     # but recipe routes hide it and no new work is queued for it.
     deleted_at: datetime | None = None

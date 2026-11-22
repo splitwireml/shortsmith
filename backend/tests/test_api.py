@@ -34,15 +34,16 @@ def test_pipeline_crud(client):
     pipeline = created.json()
     pid = pipeline["id"]
     assert {k: pipeline[k] for k in PIPELINE} == PIPELINE
-    assert (pipeline["active"], pipeline["last_run_at"]) == (True, None)
+    # A new recipe starts paused: saving one must never start spending.
+    assert (pipeline["active"], pipeline["last_run_at"]) == (False, None)
     assert [p["id"] for p in client.get("/api/pipelines").json()] == [pid]
     assert client.get(f"/api/pipelines/{pid}").json()["name"] == "Space facts"
 
     # The UI sends back what it loaded; read-only fields (id, created_at…) are ignored.
-    paused = client.put(f"/api/pipelines/{pid}", json={**pipeline, "active": False, "every_days": 3})
-    assert paused.status_code == 200, paused.text
-    assert (paused.json()["active"], paused.json()["every_days"]) == (False, 3)
-    assert client.get(f"/api/pipelines/{pid}").json()["active"] is False
+    resumed = client.put(f"/api/pipelines/{pid}", json={**pipeline, "active": True, "every_days": 3})
+    assert resumed.status_code == 200, resumed.text
+    assert (resumed.json()["active"], resumed.json()["every_days"]) == (True, 3)
+    assert client.get(f"/api/pipelines/{pid}").json()["active"] is True
 
     assert client.delete(f"/api/pipelines/{pid}").is_success
     missing = client.get(f"/api/pipelines/{pid}")
@@ -52,6 +53,26 @@ def test_pipeline_crud(client):
     assert client.get("/api/pipelines").json() == []
 
     assert client.post("/api/pipelines", json={**PIPELINE, "target_seconds": 5}).status_code == 422  # P1: 15–60 s
+
+
+def test_make_a_video_now_still_works_on_a_paused_recipe(client):
+    pid = client.post("/api/pipelines", json=PIPELINE).json()["id"]
+    queued = client.post(f"/api/pipelines/{pid}/run", json={"count": 1})
+    assert queued.status_code == 201, queued.text
+    assert queued.json()[0]["status"] == "queued"
+
+
+def test_cost_estimate_for_the_recipe_form(client):
+    from pytest import approx
+
+    # 720p defaults: 30 s of video + one thumbnail, twice every two days.
+    estimate = client.get(
+        "/api/costs/estimate",
+        params={"seconds": 30, "every_days": 2, "videos_per_run": 2},
+    )
+    assert estimate.status_code == 200, estimate.text
+    assert estimate.json()["per_video_usd"] == approx(30 * 5792 * 12 / 1e6 + 0.0336)
+    assert estimate.json()["per_month_usd"] == approx(estimate.json()["per_video_usd"] * 30)
 
 
 def test_presets_fill_every_field_and_save_as_is(client):

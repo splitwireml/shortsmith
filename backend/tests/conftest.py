@@ -1,3 +1,5 @@
+import asyncio
+import inspect
 import os
 import sys
 from pathlib import Path
@@ -41,7 +43,15 @@ def make_config(data_dir: Path, gemini_api_key: str = FAKE_GEMINI_KEY):
     from app.config import Config
 
     # Doc is silent on Config's shape: pydantic-settings class `Config` with these two fields.
-    return Config(_env_file=None, gemini_api_key=gemini_api_key, data_dir=data_dir)
+    # S3: `run_worker=False` keeps the background loop off so tests drive every step themselves
+    # (start-up recovery still runs). Until Config has the field, extra="ignore" drops it.
+    return Config(_env_file=None, gemini_api_key=gemini_api_key, data_dir=data_dir, run_worker=False)
+
+
+def call(fn, *args, **kwargs):
+    """Run a worker-loop step whether it was written sync or async."""
+    result = fn(*args, **kwargs)
+    return asyncio.run(result) if inspect.iscoroutine(result) else result
 
 
 @pytest.fixture

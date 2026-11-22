@@ -29,6 +29,13 @@ _ROLE_FOR_STAGE = {
     Stage.help: "helper",
 }
 
+# ponytail: flat reserve for one text call. Help and analyst calls cost
+# cents and are unknowable in advance, so reserve a nickel and let the
+# monthly cap still be a cap (C3). The video stages reserve their own
+# upcoming spend in pipeline.py and are not re-checked here.
+TEXT_CALL_RESERVE_USD = 0.05
+_BUDGET_CHECKED_STAGES = {Stage.analytics, Stage.help}
+
 
 def build_model(role: str, settings: Settings, config: Config) -> GoogleModel:
     provider = GoogleProvider(api_key=config.gemini_api_key.get_secret_value())
@@ -48,6 +55,9 @@ async def run_agent(
 ) -> OutputT:
     """Run one agent call and write its cost event from the usage numbers."""
     settings = db.get_settings(session)
+    if stage in _BUDGET_CHECKED_STAGES:
+        # No video to charge against: this checks the monthly cap only.
+        costs.check_budget(session, None, upcoming_usd=TEXT_CALL_RESERVE_USD)
     role = _ROLE_FOR_STAGE[stage]
     result = await agent.run(
         prompt,

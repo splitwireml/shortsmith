@@ -6,10 +6,12 @@ keep pointing at a row with a name, but the recipe routes below hide it.
 
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, Depends, HTTPException, Response
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, ConfigDict, Field
 from sqlmodel import Session, col, select
 
+from app import costs
+from app.agents import helper
 from app.db import get_session
 from app.models import Pipeline, PipelineBase, Video, VideoStatus
 from app.presets import PRESETS
@@ -30,6 +32,10 @@ class PipelineUpdate(PipelineBase):
 class RunIn(BaseModel):
     count: int = Field(default=1, ge=1, le=3)
     is_test: bool = False
+
+
+class SuggestIn(BaseModel):
+    description: str = Field(min_length=1)
 
 
 def _get_or_404(session: Session, pipeline_id: int) -> Pipeline:
@@ -53,10 +59,32 @@ def list_pipelines(session: Session = Depends(get_session)) -> list[Pipeline]:
 @router.post("/pipelines", status_code=201)
 def create_pipeline(body: PipelineBase, session: Session = Depends(get_session)) -> Pipeline:
     pipeline = Pipeline.model_validate(body)
+    # A new recipe starts paused: saving one must never start spending.
+    # “Make a video now” still works while paused; only the schedule waits.
+    pipeline.active = False
     session.add(pipeline)
     session.commit()
     session.refresh(pipeline)
     return pipeline
+
+
+@router.post("/pipelines/suggest")
+async def suggest_pipeline(
+    body: SuggestIn, request: Request, session: Session = Depends(get_session)
+) -> PipelineBase:
+    """Fill the form from one sentence (P3). Nothing is saved."""
+    try:
+        return await helper.suggest(session, request.app.state.config, body.description)
+    except costs.BudgetExceeded as exc:
+        raise HTTPException(402, str(exc)) from None
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(
+            502,
+            "The assistant could not fill in the recipe just now. "
+            "You can fill the form in yourself, or try again in a moment.",
+        ) from None
 
 
 @router.get("/pipelines/{pipeline_id}")

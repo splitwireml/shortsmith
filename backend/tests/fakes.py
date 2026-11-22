@@ -77,6 +77,8 @@ def fake_model(*outputs: dict, calls: list[Call] | None = None) -> FunctionModel
     def respond(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
         output = outputs[min(len(seen), len(outputs) - 1)]
         seen.append(Call(messages, info))
+        if isinstance(output, str):  # a plain-text agent (helper.ask)
+            return ModelResponse(parts=[TextPart(output)])
         if info.output_tools:  # Pydantic AI's default: structured output arrives as a tool call
             return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, output)])
         return ModelResponse(parts=[TextPart(json.dumps(output))])
@@ -94,4 +96,24 @@ def fake_text_agents(plan: dict = PLAN, reviews: tuple[dict, ...] = (GOOD_REVIEW
         planner.agent.override(model=fake_model(plan, calls=calls["planner"])),
         reviewer.agent.override(model=fake_model(*reviews, calls=calls["reviewer"])),
     ):
+        yield calls
+
+
+@contextmanager
+def fake_analyst(*outputs: dict):
+    """Override `analyst.agent`; outputs look like {"lessons_to_add": [...], "lesson_ids_to_retire": [...]}."""
+    from app.agents import analyst
+
+    calls: list[Call] = []
+    with analyst.agent.override(model=fake_model(*outputs, calls=calls)):
+        yield calls
+
+
+@contextmanager
+def fake_helper(answer: str):
+    """Override `helper.ask_agent`, a plain-text agent that answers with `answer`."""
+    from app.agents import helper
+
+    calls: list[Call] = []
+    with helper.ask_agent.override(model=fake_model(answer, calls=calls)):
         yield calls

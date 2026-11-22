@@ -10,14 +10,18 @@ Each stage returns the next status; `advance` saves the successful
 transition. Paid checkpoints inside a stage (a finished clip and its
 cost) are still committed at once by `costs.record`.
 
-`approved` rests here; publishing arrives in S3.
+Publishing (`approved`) guards against a double upload (Y2): a stored
+YouTube id means “already up”, and the `publishing` status is
+committed before any byte is sent, so a crash mid-upload can never
+silently retry — start-up turns it into a plain failure instead.
 """
 
 import asyncio
+from datetime import UTC, datetime
 
 from sqlmodel import Session, col, select
 
-from app import costs, db, media, stitch
+from app import costs, db, media, stitch, youtube
 from app.agents import planner, reviewer
 from app.config import Config
 from app.models import ApprovalMode, Clip, Pipeline, Stage, Video, VideoStatus
@@ -179,6 +183,77 @@ async def _review(session: Session, video: Video, config: Config) -> VideoStatus
     return VideoStatus.approved if auto else VideoStatus.awaiting_approval
 
 
+async def _publish(session: Session, video: Video, config: Config) -> VideoStatus:
+    if video.youtube_id:  # already uploaded once — never again (Y2)
+        video.published_at = video.published_at or datetime.now(UTC)
+        return VideoStatus.published
+    recipe = session.get(Pipeline, video.pipeline_id)
+    if recipe is None:
+        raise RuntimeError("This video's recipe could not be found, so it cannot be published.")
+    storage = Storage(config.media_dir)
+    final_key = _final_key(video.id)
+    if not storage.exists(final_key):
+        raise RuntimeError("The finished video file is missing, so it cannot be published.")
+    thumb_key = _thumb_key(video.id)
+    settings = db.get_settings(session)
+    plan = video.plan or {}
+    # The lock is committed before any byte is sent: a crash mid-upload
+    # leaves `publishing` behind, which start-up recovery reports
+    # instead of risking a second upload.
+    video.status = VideoStatus.publishing
+    session.add(video)
+    session.commit()
+    youtube_id = await asyncio.to_thread(
+        youtube.upload,
+        config,
+        video_path=storage.path(final_key),
+        title=video.title or plan.get("title") or "Untitled",
+        description=plan.get("description") or "",
+        tags=list(plan.get("tags") or []),
+        privacy=recipe.visibility.value,
+        practice=settings.practice_mode,
+    )
+    # The id is saved the moment YouTube hands it over, before any
+    # thumbnail work: a restart during processing can no longer lose
+    # a video YouTube already has.
+    video.youtube_id = str(youtube_id)
+    video.published_at = datetime.now(UTC)
+    video.status = VideoStatus.published
+    session.add(video)
+    session.commit()
+    if storage.exists(thumb_key):
+        note = await asyncio.to_thread(
+            youtube.set_thumbnail, config, video.youtube_id, storage.path(thumb_key)
+        )
+        if note:  # published fine; the note rides along on the video page
+            video.error = note
+    return VideoStatus.published
+
+
+INTERRUPTED_UPLOAD_MESSAGE = (
+    "The upload was interrupted. Check your YouTube channel; "
+    "if the video is not there, press Retry."
+)
+
+
+def recover_publishing(session: Session) -> None:
+    """Start-up: a video left in `publishing` was cut off mid-upload.
+
+    It becomes `failed` from `approved` (`publishing` is a lock, not a
+    stage), so Retry re-enters publish — after the user has checked
+    the channel, as the message says. # ponytail: we do not query
+    YouTube to auto-resolve this.
+    """
+    stuck = session.exec(select(Video).where(Video.status == VideoStatus.publishing)).all()
+    for video in stuck:
+        video.status = VideoStatus.failed
+        video.failed_status = VideoStatus.approved
+        video.error = INTERRUPTED_UPLOAD_MESSAGE
+        session.add(video)
+    if stuck:
+        session.commit()
+
+
 def _plain_message(exc: Exception) -> str:
     lines = [line.strip() for line in str(exc).splitlines() if line.strip()]
     if not lines:
@@ -204,14 +279,17 @@ async def advance(session: Session, video: Video, config: Config) -> Video:
         VideoStatus.queued: _plan,
         VideoStatus.generating: _generate,
         VideoStatus.reviewing: _review,
+        VideoStatus.approved: _publish,
     }
     where = VideoStatus(video.status)
     stage_fn = stages.get(where)
     if stage_fn is None:
         return video
     try:
-        video.status = await stage_fn(session, video, config)
+        # Cleared before, not after: publish may leave a thumbnail note
+        # in `error` on an otherwise successful run.
         video.error = None
+        video.status = await stage_fn(session, video, config)
         video.failed_status = None
         session.add(video)
         session.commit()

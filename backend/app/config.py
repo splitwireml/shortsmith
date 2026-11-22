@@ -28,6 +28,9 @@ class Config(BaseSettings):
         validation_alias=AliasChoices("GEMINI_API_KEY", "GOOGLE_API_KEY"),
     )
     data_dir: Path = REPO_ROOT / "data"
+    # Tests turn the background worker loop off and drive every step
+    # themselves; start-up recovery still runs either way.
+    run_worker: bool = True
 
     @property
     def db_path(self) -> Path:
