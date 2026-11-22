@@ -1,0 +1,368 @@
+[
+	{
+		"id": "setup-guide",
+		"title": "Getting started, step by step",
+		"body": "The setup guide walks you through everything in order: checking the app works, connecting YouTube, making your first channel recipe, setting a budget and making a practice video. You can skip any step and come back through the Setup guide link at any time.",
+		"pages": ["/", "/setup"],
+		"keywords": ["start", "begin", "first", "onboarding", "guide", "new"],
+		"show_me": { "href": "/setup", "highlight": "setup-steps" }
+	},
+	{
+		"id": "practice-mode",
+		"title": "What is practice mode?",
+		"body": "In practice mode the video clips are free coloured test clips and nothing is uploaded to YouTube, so you can try everything safely. Writing the plan still uses the real wording tools and costs a few cents, which makes the practice run true to life. The yellow banner at the top is showing whenever practice mode is on.",
+		"pages": ["/", "/settings", "/setup"],
+		"keywords": ["test", "free", "fake", "safe", "banner", "coloured"],
+		"show_me": { "href": "/settings", "highlight": "setting-practice-mode" }
+	},
+	{
+		"id": "system-check",
+		"title": "The checks on the home page",
+		"body": "The home page checks four things every time: that your key for making videos works, whether YouTube is connected, whether the clip-joining tool is installed, and how much free space is left. A green tick means all is well. Anything else explains in plain words what to do.",
+		"pages": ["/", "/setup"],
+		"keywords": ["tick", "green", "works", "ffmpeg", "disk", "key", "space"],
+		"show_me": { "href": "/", "highlight": "system-check" }
+	},
+	{
+		"id": "needs-you",
+		"title": "The “Needs you” list",
+		"body": "When a finished video is waiting for your decision, it appears in the Needs you list on the home page. Open it, watch it, then approve it to publish or reject it to throw it away. Nothing is published until you say so.",
+		"pages": ["/", "/videos/[id]"],
+		"keywords": ["inbox", "waiting", "approve", "decision", "watch"],
+		"show_me": { "href": "/", "highlight": "needs-you" }
+	},
+	{
+		"id": "what-is-a-recipe",
+		"title": "What is a channel recipe?",
+		"body": "A channel recipe is your saved instructions for one kind of video: what it is about, who it is for, how it should look and how often to make it. You can have several recipes, for example one for animal stories and one for facts. Every video is made from a recipe.",
+		"pages": ["/pipelines", "/pipelines/new"],
+		"keywords": ["channel", "kind", "saved", "instructions"],
+		"show_me": { "href": "/pipelines", "highlight": "recipes-list" }
+	},
+	{
+		"id": "presets",
+		"title": "Starting from a ready-made recipe",
+		"body": "Presets such as Educational, Animals and Comedy fill in every box of the recipe form with sensible starting values. Pick the closest one, change anything you like, then save. Choosing Blank starts with empty boxes instead.",
+		"pages": ["/pipelines/new"],
+		"keywords": ["preset", "educational", "animals", "comedy", "motivation", "facts", "blank", "template"],
+		"show_me": { "href": "/pipelines/new", "highlight": "field-presets" }
+	},
+	{
+		"id": "describe-in-a-sentence",
+		"title": "Describe it in a sentence",
+		"body": "Type one sentence about the videos you want, such as “short jokes about cats for children”, and Shortsmith fills in the recipe form for you. Read through what it wrote and fix anything that is not quite right before saving. The form works just as well filled in by hand.",
+		"pages": ["/pipelines/new"],
+		"keywords": ["sentence", "describe", "fill", "automatic", "shortcut"],
+		"show_me": { "href": "/pipelines/new", "highlight": "field-describe" }
+	},
+	{
+		"id": "recipe-name",
+		"title": "Recipe name",
+		"body": "A short name so you can tell your recipes apart, such as “Cat facts”. Viewers never see it. It is only for you, so use words that make sense to you.",
+		"pages": ["/pipelines/new", "/pipelines/[id]"],
+		"keywords": ["name", "title", "call"],
+		"show_me": { "href": "/pipelines/new", "highlight": "field-name" }
+	},
+	{
+		"id": "recipe-niche",
+		"title": "What are the videos about?",
+		"body": "The subject in a few words, such as “cute animal moments” or “little-known world facts”. Every idea for this recipe stays on this subject. One clear subject works better than several mixed together.",
+		"pages": ["/pipelines/new", "/pipelines/[id]"],
+		"keywords": ["niche", "subject", "topic", "about"],
+		"show_me": { "href": "/pipelines/new", "highlight": "field-niche" }
+	},
+	{
+		"id": "recipe-objective",
+		"title": "What should this achieve?",
+		"body": "The aim in one sentence, such as “teach one surprising idea per video” or “make people laugh and share it”. It helps Shortsmith choose ideas that pull in the same direction instead of drifting.",
+		"pages": ["/pipelines/new", "/pipelines/[id]"],
+		"keywords": ["objective", "aim", "goal", "achieve", "purpose"],
+		"show_me": { "href": "/pipelines/new", "highlight": "field-objective" }
+	},
+	{
+		"id": "recipe-audience",
+		"title": "Who is it for?",
+		"body": "The people you hope will watch, such as “families with young children” or “busy adults”. Wording, jokes and pace are all shaped to suit them. If you are unsure, picture one real person and describe them.",
+		"pages": ["/pipelines/new", "/pipelines/[id]"],
+		"keywords": ["audience", "who", "viewers", "people", "children"],
+		"show_me": { "href": "/pipelines/new", "highlight": "field-audience" }
+	},
+	{
+		"id": "recipe-region-language",
+		"title": "Region and language notes",
+		"body": "Anything about place or wording that matters, such as “plain international English”, “give sizes in metric and imperial” or “avoid slang only one country uses”. Leave it empty if nothing special applies.",
+		"pages": ["/pipelines/new", "/pipelines/[id]"],
+		"keywords": ["region", "language", "country", "words", "slang", "metric"],
+		"show_me": { "href": "/pipelines/new", "highlight": "field-region-notes" }
+	},
+	{
+		"id": "recipe-genre",
+		"title": "Kind of video and tone",
+		"body": "The style of telling, such as “gentle explainer”, “silly comedy sketch” or “fast-paced trivia”, and how it should feel: warm, calm, cheeky. This steers the words and the pacing of every video from the recipe.",
+		"pages": ["/pipelines/new", "/pipelines/[id]"],
+		"keywords": ["genre", "tone", "style", "kind", "feel"],
+		"show_me": { "href": "/pipelines/new", "highlight": "field-genre" }
+	},
+	{
+		"id": "recipe-art-style",
+		"title": "How should it look?",
+		"body": "A few words about the pictures, such as “soft friendly cartoon animals in bright colours”. The same look is used for every clip and the thumbnail, so the channel feels joined up. Keep it short and concrete.",
+		"pages": ["/pipelines/new", "/pipelines/[id]"],
+		"keywords": ["look", "pictures", "art", "cartoon", "colours", "draw"],
+		"show_me": { "href": "/pipelines/new", "highlight": "field-art-style" }
+	},
+	{
+		"id": "recipe-length",
+		"title": "How long should each video be?",
+		"body": "Between 15 and 60 seconds. Shorter videos are cheaper and quicker to make; longer ones can fit a fuller story. The cost grows with every second, and the estimate on the form updates as you change this number.",
+		"pages": ["/pipelines/new", "/pipelines/[id]"],
+		"keywords": ["length", "seconds", "long", "short", "duration"],
+		"show_me": { "href": "/pipelines/new", "highlight": "field-target-seconds" }
+	},
+	{
+		"id": "recipe-how-often",
+		"title": "How often should videos be made?",
+		"body": "“Every N days” says how often Shortsmith starts a new batch for this recipe on its own, and “videos each time” says how many it makes then. For example, every 2 days with 1 video each time makes about 15 videos a month. You can also make one at any moment with the Make a video now button.",
+		"pages": ["/pipelines/new", "/pipelines/[id]"],
+		"keywords": ["often", "days", "schedule", "automatic", "batch", "each time"],
+		"show_me": { "href": "/pipelines/new", "highlight": "field-every-days" }
+	},
+	{
+		"id": "recipe-approval",
+		"title": "Who says yes before publishing?",
+		"body": "With “I check every video”, nothing is published until you approve it. With “Publish on its own above a score”, a video that scores at least your chosen mark out of 10 is published without waiting for you, and anything below it still waits. Test videos always wait for you either way.",
+		"pages": ["/pipelines/new", "/pipelines/[id]"],
+		"keywords": ["approval", "automatic", "score", "publish", "check", "manual", "auto"],
+		"show_me": { "href": "/pipelines/new", "highlight": "field-approval-mode" }
+	},
+	{
+		"id": "recipe-visibility",
+		"title": "Who can see the video on YouTube?",
+		"body": "Private means only you can see it. Unlisted means anyone with the link can watch, but it does not show up in searches. Public means anyone can find and watch it. Starting with Private is a safe way to check things first.",
+		"pages": ["/pipelines/new", "/pipelines/[id]"],
+		"keywords": ["visibility", "private", "unlisted", "public", "see"],
+		"show_me": { "href": "/pipelines/new", "highlight": "field-visibility" }
+	},
+	{
+		"id": "recipe-extra-notes",
+		"title": "Anything else Shortsmith should know",
+		"body": "Free words for anything the other boxes did not cover: “always end with a question”, “no scary endings”, “never mention prices”. These notes are read every time a video is planned.",
+		"pages": ["/pipelines/new", "/pipelines/[id]"],
+		"keywords": ["notes", "else", "extra", "always", "never", "rules"],
+		"show_me": { "href": "/pipelines/new", "highlight": "field-extra-notes" }
+	},
+	{
+		"id": "recipe-estimate",
+		"title": "The cost estimate on the recipe form",
+		"body": "The estimate shows roughly what one video from this recipe will cost, and roughly what a month of them adds up to at the pace you chose. Making the moving clips is nearly all of the cost, at about seven cents per second of video. Planning, the thumbnail picture and the quality check add a few cents more.",
+		"pages": ["/pipelines/new", "/pipelines/[id]", "/costs"],
+		"keywords": ["estimate", "cost", "price", "month", "much"],
+		"show_me": { "href": "/pipelines/new", "highlight": "field-estimate" }
+	},
+	{
+		"id": "pause-delete-recipe",
+		"title": "Pausing or deleting a recipe",
+		"body": "Pausing stops a recipe from starting new videos on its own; you can resume it whenever you like. Deleting removes the recipe from your list. Either way, videos already made and the record of money spent are kept, so your history stays complete.",
+		"pages": ["/pipelines", "/pipelines/[id]"],
+		"keywords": ["pause", "resume", "delete", "remove", "stop"],
+		"show_me": { "href": "/pipelines", "highlight": "recipes-list" }
+	},
+	{
+		"id": "make-a-video-now",
+		"title": "Making a video right now",
+		"body": "“Make a video now” starts one video from that recipe straight away, without waiting for its usual schedule. “Make a test batch” starts one to three test videos. Test videos are never published until you approve them yourself, even on recipes that normally publish on their own.",
+		"pages": ["/pipelines", "/pipelines/[id]", "/setup"],
+		"keywords": ["now", "test batch", "start", "button", "make"],
+		"show_me": { "href": "/pipelines", "highlight": "recipes-list" }
+	},
+	{
+		"id": "video-stages",
+		"title": "The steps a video goes through",
+		"body": "First the plan is written, then the clips and thumbnail are made and joined together, then the finished video is watched and scored. After that it waits for your approval (unless your recipe publishes high scores on its own), and finally it is uploaded to YouTube. If the app is closed midway, the video carries on from where it left off.",
+		"pages": ["/videos", "/videos/[id]", "/"],
+		"keywords": ["steps", "stages", "planning", "making", "checking", "publishing"],
+		"show_me": { "href": "/videos", "highlight": "videos-list" }
+	},
+	{
+		"id": "approve-reject",
+		"title": "Approving or rejecting a video",
+		"body": "Watch the video through, then press Approve to publish it or Reject to throw it away. If you write a reason for rejecting, your exact words are kept as a lesson and read when the next video from that recipe is planned, so the same mistake is less likely twice.",
+		"pages": ["/videos/[id]", "/"],
+		"keywords": ["approve", "reject", "publish", "reason", "throw away"],
+		"show_me": { "href": "/", "highlight": "needs-you" }
+	},
+	{
+		"id": "thumbs-and-notes",
+		"title": "Thumbs up, thumbs down and notes",
+		"body": "You can mark any video thumbs up or thumbs down and add a note, before or after it is published. Anything you write becomes a lesson in your own words and is read when future videos from that recipe are planned. Short, plain notes like “the opening was too slow” work best.",
+		"pages": ["/videos/[id]", "/insights"],
+		"keywords": ["thumbs", "note", "rating", "like", "feedback", "lesson"],
+		"show_me": { "href": "/videos", "highlight": "videos-list" }
+	},
+	{
+		"id": "review-score",
+		"title": "The quality score out of 10",
+		"body": "When a video is finished it is watched once and scored out of 10, and any clip that looks wrong is named and made again once before a final check. The score and the notes are on the video's page. On recipes set to publish on their own, this score decides whether the video still waits for you.",
+		"pages": ["/videos/[id]"],
+		"keywords": ["score", "quality", "review", "bad clip", "watch"],
+		"show_me": { "href": "/videos", "highlight": "videos-list" }
+	},
+	{
+		"id": "retry-failed",
+		"title": "When a video stops and says why",
+		"body": "If something goes wrong, the video stops and its page explains why in plain words. Press Retry to carry on from where it stopped. Work that was already paid for, such as finished clips, is kept and is not paid for again.",
+		"pages": ["/videos/[id]", "/videos"],
+		"keywords": ["failed", "stopped", "retry", "wrong", "error", "again"],
+		"show_me": { "href": "/videos", "highlight": "videos-list" }
+	},
+	{
+		"id": "video-plan",
+		"title": "The plan on a video's page",
+		"body": "Each video's page shows the plan it was made from: the opening hook, the words for YouTube, and the scene-by-scene list. This is the easiest place to see why a video turned out the way it did, and to spot what to ask for differently next time.",
+		"pages": ["/videos/[id]"],
+		"keywords": ["plan", "hook", "scenes", "title", "description"],
+		"show_me": { "href": "/videos", "highlight": "videos-list" }
+	},
+	{
+		"id": "video-cost",
+		"title": "What one video cost",
+		"body": "Every payment for a video is written down: planning, each clip, the thumbnail picture and the quality check. The video's page adds them up and shows the reason for each line, so the total is never a mystery. In practice mode the clips and thumbnail cost nothing and say so.",
+		"pages": ["/videos/[id]", "/costs"],
+		"keywords": ["cost", "paid", "lines", "total", "each video"],
+		"show_me": { "href": "/videos", "highlight": "videos-list" }
+	},
+	{
+		"id": "costs-page",
+		"title": "Reading the Money spent page",
+		"body": "This page shows this month against your budget, a guess at the month-end total if spending carries on at the same pace, and where the money went: by step, by recipe, by day and per video. “Cost per view” appears once published videos have viewer numbers, and says what each view cost you.",
+		"pages": ["/costs"],
+		"keywords": ["money", "spend", "dollars", "budget", "view", "month"],
+		"show_me": { "href": "/costs", "highlight": "costs-month" }
+	},
+	{
+		"id": "why-video-costs-most",
+		"title": "Why the clips cost nearly everything",
+		"body": "Making moving pictures is charged by the second, about seven cents a second at the usual size, so a 30-second video costs about two dollars in clips alone. Planning, the thumbnail and the quality check are a few cents each. Shortening a recipe's videos is the surest way to spend less.",
+		"pages": ["/costs", "/pipelines/new"],
+		"keywords": ["expensive", "second", "cheaper", "nearly all"],
+		"show_me": { "href": "/costs", "highlight": "costs-by-stage" }
+	},
+	{
+		"id": "monthly-budget",
+		"title": "Setting a monthly budget",
+		"body": "The monthly budget is the most Shortsmith may spend in a month, across everything. Before any paid step it checks the budget first; if the step would go over, the video stops with a clear message and nothing is spent. You can change the budget at any time in Settings.",
+		"pages": ["/settings", "/costs", "/setup"],
+		"keywords": ["budget", "money", "limit", "spend", "month", "cap"],
+		"show_me": { "href": "/settings", "highlight": "setting-monthly-budget" }
+	},
+	{
+		"id": "per-video-cap",
+		"title": "The most one video may cost",
+		"body": "This limit guards a single video: if making it would cost more than this, it stops before the money is spent and explains why. It is a safety net against one long or unlucky video eating the whole month's budget.",
+		"pages": ["/settings"],
+		"keywords": ["cap", "limit", "one video", "safety"],
+		"show_me": { "href": "/settings", "highlight": "setting-per-video-cap" }
+	},
+	{
+		"id": "budget-stopped",
+		"title": "My video stopped and mentions money",
+		"body": "That means carrying on would have gone over your monthly budget or the most-one-video limit, so nothing was spent. Raise the limit in Settings if you are happy to spend more, then press Retry on the video. Keeping videos shorter also helps.",
+		"pages": ["/videos/[id]", "/settings", "/costs"],
+		"keywords": ["over", "stopped", "budget", "nothing spent", "limit"],
+		"show_me": { "href": "/settings", "highlight": "setting-monthly-budget" }
+	},
+	{
+		"id": "lessons",
+		"title": "Lessons: what Shortsmith has learned",
+		"body": "A lesson is one short sentence, such as “openings that ask a question get more views”, read every time a new video is planned. Lessons come from your own words and from studying viewer numbers. You can switch any lesson off, or delete it, on the Lessons page; at most ten are in use per recipe.",
+		"pages": ["/insights", "/videos/[id]"],
+		"keywords": ["learned", "lessons", "switch off", "delete lesson", "remember"],
+		"show_me": { "href": "/insights", "highlight": "lessons" }
+	},
+	{
+		"id": "viewer-numbers",
+		"title": "When do viewer numbers appear?",
+		"body": "After a video is published its numbers are collected at set times: after 1 hour, 6 hours, a day, two days, three days, a week and four weeks. Views, likes and comments arrive quickly; figures such as how much of the video people watched take two to three days, because YouTube works them out slowly.",
+		"pages": ["/insights", "/videos/[id]"],
+		"keywords": ["views", "likes", "numbers", "when", "watched", "snapshot"],
+		"show_me": { "href": "/insights", "highlight": "performance" }
+	},
+	{
+		"id": "connect-youtube",
+		"title": "Connecting your YouTube channel",
+		"body": "Press the connect button and sign in with Google in the page that opens, choosing the account that owns your channel. Shortsmith can then upload videos you approve and collect their viewer numbers. You can disconnect at any time in Settings.",
+		"pages": ["/setup", "/settings"],
+		"keywords": ["google", "channel", "login", "sign in", "connect"],
+		"show_me": { "href": "/settings", "highlight": "youtube-connect" }
+	},
+	{
+		"id": "youtube-expired",
+		"title": "When the YouTube connection expires",
+		"body": "Google sign-ins for apps like this can run out after a while. When that happens Shortsmith says the connection needs renewing instead of failing quietly. Press Reconnect in Settings and sign in again; nothing is lost and videos waiting to publish carry on afterwards.",
+		"pages": ["/settings", "/setup"],
+		"keywords": ["expired", "reconnect", "sign in again", "ran out", "renew"],
+		"show_me": { "href": "/settings", "highlight": "youtube-connect" }
+	},
+	{
+		"id": "storage-cleanup",
+		"title": "Keeping, cleaning up and archived videos",
+		"body": "Video files take up room, so old ones are cleaned up automatically: files of unpublished videos are removed after the number of days you choose (the video is then marked archived), and if the folder grows past your size limit the oldest files go first. The written record and money spent are always kept.",
+		"pages": ["/settings", "/videos/[id]"],
+		"keywords": ["archived", "clean", "space", "old", "files", "kept"],
+		"show_me": { "href": "/settings", "highlight": "setting-retention-days" }
+	},
+	{
+		"id": "retention-days",
+		"title": "How long to keep video files",
+		"body": "The number of days video files are kept before clean-up removes them to free space. Published videos stay on YouTube either way; this only affects the copies on this laptop. Notes, scores and money spent are kept for good.",
+		"pages": ["/settings"],
+		"keywords": ["retention", "days", "keep", "delete files"],
+		"show_me": { "href": "/settings", "highlight": "setting-retention-days" }
+	},
+	{
+		"id": "storage-cap",
+		"title": "The most room videos may take up",
+		"body": "If the folder holding video files grows past this size, the oldest files are removed first until there is room again. Raise it if you have plenty of space and like keeping local copies; lower it if the laptop is nearly full.",
+		"pages": ["/settings"],
+		"keywords": ["storage", "gigabytes", "room", "size", "full"],
+		"show_me": { "href": "/settings", "highlight": "setting-max-storage" }
+	},
+	{
+		"id": "advanced-settings",
+		"title": "Advanced settings: the names under the hood",
+		"body": "The Advanced section in Settings holds the exact names of the outside services used for wording, clips and thumbnail pictures, plus how hard each wording step thinks. The starting choices work well; change them only if you know the name you want. A name Shortsmith cannot price is refused, so nothing is ever spent at an unknown price.",
+		"pages": ["/settings"],
+		"keywords": ["advanced", "model", "names", "effort", "think", "size"],
+		"show_me": { "href": "/settings", "highlight": "advanced-settings" }
+	},
+	{
+		"id": "delete-video",
+		"title": "Deleting a video",
+		"body": "Deleting a video removes it, its clips and its files from Shortsmith. The record of money spent on it stays, because that money was spent whether or not the video is kept. Deleting here does not remove anything already published on YouTube.",
+		"pages": ["/videos/[id]", "/videos"],
+		"keywords": ["delete", "remove", "throw away", "gone"],
+		"show_me": { "href": "/videos", "highlight": "videos-list" }
+	},
+	{
+		"id": "ask-the-assistant",
+		"title": "Asking the assistant in the help drawer",
+		"body": "If searching these help pages does not find your answer, use “Ask the assistant” at the bottom of the help drawer. It answers only from these help pages plus a short summary of how your app stands right now, in plain words. Each question costs a few cents and is listed on the Money spent page.",
+		"pages": ["/", "/pipelines", "/videos", "/costs", "/insights", "/settings", "/setup"],
+		"keywords": ["ask", "assistant", "question", "answer", "drawer", "search"]
+	},
+	{
+		"id": "help-everywhere",
+		"title": "Getting help on any page",
+		"body": "The Help button at the top of every page, or the question-mark key on your keyboard, opens the help drawer. Start typing and matching pages appear straight away, with help for the page you are on first. “Show me” takes you to the right screen and lights up the thing you need. Every box on a form also has its own “What is this?” line.",
+		"pages": ["/", "/pipelines", "/pipelines/new", "/videos", "/costs", "/insights", "/settings", "/setup"],
+		"keywords": ["help", "question mark", "show me", "what is this", "drawer"]
+	},
+	{
+		"id": "first-practice-video",
+		"title": "Your first practice video",
+		"body": "The last step of the setup guide makes a test video: a real plan, free coloured clips, no upload. Watch it in the Needs you list and try approving, rejecting and leaving a note. When it all makes sense, turn practice mode off in Settings and make a real one.",
+		"pages": ["/setup", "/"],
+		"keywords": ["first", "practice video", "try", "test video", "coloured"],
+		"show_me": { "href": "/setup", "highlight": "setup-steps" }
+	}
+]
