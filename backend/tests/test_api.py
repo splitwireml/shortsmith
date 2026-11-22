@@ -83,19 +83,29 @@ def test_settings_defaults_and_round_trip(client, session):
     assert len(session.exec(select(Settings)).all()) == 1  # exactly one row
 
 
-def test_status_reports_each_check(client):
+def test_status_reports_each_check(client, monkeypatch):
+    monkeypatch.setattr("app.media.check_key", lambda config: True)  # no network in tests
     status = client.get("/api/status").json()
     checks = {c["name"]: c for c in status["checks"]}
     # Doc is silent on check names; these are the four in H2.
     assert set(checks) == {"gemini", "youtube", "ffmpeg", "disk"}
     for check in checks.values():
         assert isinstance(check["ok"], bool) and check["message"]
+    assert checks["gemini"]["ok"] is True  # the (patched) live key check passed
     assert checks["youtube"]["ok"] is False  # no token in the temp data folder
     assert (status["onboarding_done"], status["practice_mode"]) == (False, True)
 
 
+def test_status_says_when_the_key_could_not_be_checked(client, monkeypatch):
+    monkeypatch.setattr("app.media.check_key", lambda config: None)  # Google did not answer
+    checks = {c["name"]: c for c in client.get("/api/status").json()["checks"]}
+    assert checks["gemini"]["ok"] is False
+    assert "could not check" in checks["gemini"]["message"].lower()
+
+
 def test_status_explains_what_is_broken(tmp_path, monkeypatch):
     usage = namedtuple("usage", "total used free")
+    monkeypatch.setattr("app.media.check_key", lambda config: False)  # no network in tests
     monkeypatch.setattr(shutil, "which", lambda *a, **k: None)
     monkeypatch.setattr(shutil, "disk_usage", lambda path: usage(10**12, 10**12 - 10**8, 10**8))
     with TestClient(create_app(make_config(tmp_path, gemini_api_key=""))) as client:
@@ -105,15 +115,19 @@ def test_status_explains_what_is_broken(tmp_path, monkeypatch):
         assert checks[name]["message"], name
 
 
-def test_no_secret_in_any_response(config):
+def test_no_secret_in_any_response(config, monkeypatch):
+    monkeypatch.setattr("app.media.check_key", lambda config: True)  # /status must not call out
     token_secret = "test-refresh-token-must-never-leak"
     (config.data_dir / "youtube_token.json").write_text(
         json.dumps({"token": token_secret, "refresh_token": token_secret}))
     # Server errors stay loud: a broken route must fail here, not pass
-    # as a harmless empty page. The pipeline above seeds id 1 for the
-    # GETs that take one.
+    # as a harmless empty page. The seeds below give id / key "1" to
+    # every GET that takes one: pipeline 1, video 1, media file "1".
+    config.media_dir.mkdir(parents=True, exist_ok=True)
+    (config.media_dir / "1").write_bytes(b"x")
     with TestClient(create_app(config)) as c:
         assert c.post("/api/pipelines", json=PIPELINE).is_success
+        assert c.post("/api/pipelines/1/run", json={"count": 1}).is_success
         responses = [c.put("/api/settings", json=c.get("/api/settings").json())]
         # Every GET route, today's and future sprints'. Enumerated via OpenAPI:
         # FastAPI 0.165 keeps included routers un-flattened in app.routes.

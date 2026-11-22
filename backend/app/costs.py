@@ -87,6 +87,7 @@ def record(
     unit_kind: UnitKind | str = UnitKind.tokens,
     video: Video | None = None,
     pipeline: Pipeline | None = None,
+    free: bool = False,
 ) -> CostEvent:
     """Write one cost event and commit at once (C1).
 
@@ -94,6 +95,9 @@ def record(
     and rolls back, money that was really spent stays in the ledger.
     Saving progress alongside is what lets a later Retry keep finished
     clips instead of paying for them again (V4).
+
+    `free` is practice media only (V5): the step still happened, so the
+    units and reason are recorded, at $0. Text agents never pass it.
     """
     # Convert once, up front: a mistyped stage or unit kind fails here
     # instead of skipping a charge or writing a row nothing can read.
@@ -107,13 +111,17 @@ def record(
         output_tokens=output_tokens,
         units=units,
         unit_kind=kind,
-        cost_usd=_price(
-            model,
-            settings=db.get_settings(session),
-            input_tokens=input_tokens,
-            output_tokens=output_tokens,
-            units=units,
-            unit_kind=kind,
+        cost_usd=(
+            0.0
+            if free
+            else _price(
+                model,
+                settings=db.get_settings(session),
+                input_tokens=input_tokens,
+                output_tokens=output_tokens,
+                units=units,
+                unit_kind=kind,
+            )
         ),
         video_id=video.id if video is not None else None,
         pipeline_id=(
@@ -124,6 +132,30 @@ def record(
     session.commit()
     session.refresh(event)
     return event
+
+
+def estimate_video_usd(settings: Settings, seconds: float) -> float:
+    """What `seconds` of video will cost, for the pre-spend budget check (C3)."""
+    return _price(
+        settings.video_model,
+        settings=settings,
+        input_tokens=0,
+        output_tokens=0,
+        units=seconds,
+        unit_kind=UnitKind.video_seconds,
+    )
+
+
+def estimate_thumbnail_usd(settings: Settings) -> float:
+    """What one thumbnail will cost, for the pre-spend budget check (C3)."""
+    return _price(
+        settings.image_model,
+        settings=settings,
+        input_tokens=0,
+        output_tokens=0,
+        units=1,
+        unit_kind=UnitKind.images,
+    )
 
 
 def _sum_where(session: Session, *where) -> float:

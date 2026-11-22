@@ -13,7 +13,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 from app import db
-from app.api import costs, pipelines, settings, status
+from app.api import costs, media, pipelines, settings, status, videos
 from app.config import Config
 
 logging.getLogger("httpx").setLevel(logging.WARNING)
@@ -46,7 +46,14 @@ def create_app(config: Config | None = None) -> FastAPI:
     async def validation_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
         return JSONResponse(status_code=422, content={"detail": _plain_validation_error(exc)})
 
-    for router in (pipelines.router, settings.router, costs.router, status.router):
+    for router in (
+        pipelines.router,
+        videos.router,
+        media.router,
+        settings.router,
+        costs.router,
+        status.router,
+    ):
         app.include_router(router, prefix="/api")
     return app
 

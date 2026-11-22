@@ -4,7 +4,11 @@ from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
+from pydantic_ai import models as ai_models
 from sqlmodel import Session
+
+os.environ["PYDANTIC_AI_NO_BANNER"] = "1"
+ai_models.ALLOW_MODEL_REQUESTS = False  # a real text-model request raises instead of costing money
 
 REPO = Path(__file__).resolve().parents[2]
 FAKE_GEMINI_KEY = "test-gemini-key-must-never-leak"
