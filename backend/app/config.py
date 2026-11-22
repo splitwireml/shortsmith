@@ -31,6 +31,9 @@ class Config(BaseSettings):
     # Tests turn the background worker loop off and drive every step
     # themselves; start-up recovery still runs either way.
     run_worker: bool = True
+    # The built SvelteKit app FastAPI serves (S5); a missing folder
+    # just means API only. Tests point this at a temp folder.
+    frontend_dir: Path = REPO_ROOT / "frontend" / "build"
 
     @property
     def db_path(self) -> Path:

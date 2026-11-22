@@ -21,7 +21,7 @@ from sqlmodel import select
 
 from app import media, pipeline
 from app.db import get_settings
-from app.models import CostEvent, Lesson, Pipeline, Video
+from app.models import Clip, CostEvent, Lesson, Pipeline, UnitKind, Video
 from fakes import BETTER_PROMPT, GOOD_REVIEW, PLAN, fake_text_agents, flag_clip
 from test_api import PIPELINE
 
@@ -238,7 +238,10 @@ def test_over_the_monthly_budget_fails_before_planning(session, config):
 def test_planning_reserves_the_whole_video(session, config):
     # The recipe targets 30 s (~$2.09 of video + a thumbnail). A $1 cap can
     # never hold the finished video, so planning must not spend even cents.
+    # Practice is off here: in practice the media is free and only the
+    # text call is reserved (next test).
     settings = get_settings(session)
+    settings.practice_mode = False
     settings.per_video_cap_usd = 1.0
     session.add(settings)
     session.commit()
@@ -251,6 +254,58 @@ def test_planning_reserves_the_whole_video(session, config):
     assert "nothing was spent" in video.error
     assert calls["planner"] == []
     assert events_for(session, video) == []
+
+
+def test_practice_planning_reserves_no_media_cost(session, config):
+    # Same $1 cap and 30 s recipe, but practice media is free: only the
+    # text reserve counts, so planning goes ahead.
+    settings = get_settings(session)
+    settings.per_video_cap_usd = 1.0  # practice_mode defaults to on
+    session.add(settings)
+    session.commit()
+    video = queue_video(session, make_pipeline(session))
+
+    with fake_text_agents() as calls:
+        asyncio.run(pipeline.advance(session, video, config))
+
+    session.refresh(video)
+    assert video.status == "generating", video.error
+    assert len(calls["planner"]) == 1
+    assert {e.stage for e in events_for(session, video)} == {"planning"}
+
+
+def test_paid_but_not_delivered_clip_is_still_recorded(session, config, monkeypatch):
+    video = queue_video(session, make_pipeline(session))
+    with fake_text_agents():
+        asyncio.run(pipeline.advance(session, video, config))  # planned in practice
+    settings = get_settings(session)
+    settings.practice_mode = False
+    session.add(settings)
+    session.commit()
+
+    async def thumbnail(*args, **kwargs):
+        return media.MediaResult(data=b"fake-png", units=1.0, unit_kind=UnitKind.images)
+
+    async def clip(*args, **kwargs):
+        raise media.PaidButNotDelivered(
+            "The video service could not finish this clip. Press Retry to try again."
+        )
+
+    monkeypatch.setattr(media, "generate_thumbnail", thumbnail)
+    monkeypatch.setattr(media, "generate_clip", clip)
+
+    with fake_text_agents():
+        asyncio.run(pipeline.advance(session, video, config))
+
+    session.refresh(video)
+    assert (video.status, video.failed_status) == ("failed", "generating")
+    [charge] = [e for e in events_for(session, video) if e.stage == "video"]
+    assert charge.units == 3 and charge.cost_usd > 0  # first clip's 3 s, at real prices
+    assert "never arrived" in charge.reason
+    assert all(
+        c.storage_key is None
+        for c in session.exec(select(Clip).where(Clip.video_id == video.id)).all()
+    )
 
 
 def test_over_the_per_video_cap_fails_before_generating(session, config, media_calls, monkeypatch):

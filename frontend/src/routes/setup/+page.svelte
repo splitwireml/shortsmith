@@ -4,9 +4,9 @@
 	import { api } from '$lib/api';
 	import Field from '$lib/components/Field.svelte';
 	import SystemChecks from '$lib/components/SystemChecks.svelte';
+	import YoutubeConnect from '$lib/components/YoutubeConnect.svelte';
 	import { setPractice } from '$lib/practice.svelte';
 	import type { Pipeline, Settings, StatusResponse, Video, YoutubeStatus } from '$lib/types';
-	import { waitForYoutube } from '$lib/youtube';
 	import { onMount } from 'svelte';
 
 	const stepTitles = [
@@ -25,7 +25,6 @@
 	let restored = $state(false);
 	let status = $state<StatusResponse | null>(null);
 	let youtube = $state<YoutubeStatus | null>(null);
-	let youtubeUnavailable = $state(false);
 	let pipelines = $state<Pipeline[]>([]);
 	let settings = $state<Settings | null>(null);
 	let videos = $state<Video[]>([]);
@@ -137,12 +136,12 @@
 		} catch {
 			videos = [];
 		}
+		// For the progress badge only; the connection display and actions
+		// live in YoutubeConnect, which reports fresher values on change.
 		try {
 			youtube = await api.get<YoutubeStatus>('/youtube/status');
-			youtubeUnavailable = false;
 		} catch {
 			youtube = null;
-			youtubeUnavailable = true;
 		}
 		loading = false;
 	}
@@ -175,27 +174,6 @@
 			busy = '';
 		}
 		await goto('/');
-	}
-
-	async function connectYoutube() {
-		if (busy) return;
-		busy = 'youtube';
-		message = 'A Google sign-in page should open. Sign in there, then come back here.';
-		error = '';
-		try {
-			await api.post('/youtube/connect');
-			message = 'Waiting for the Google sign-in to finish. This page updates itself.';
-			youtube = (await waitForYoutube()) ?? youtube;
-			youtubeUnavailable = youtube === null;
-			message =
-				youtube?.connected && !youtube.needs_reconnect
-					? 'YouTube is connected.'
-					: 'Signing in has not finished yet. Finish it in the Google tab, or skip this step.';
-		} catch {
-			error = 'YouTube could not be connected just now. You can skip this step and connect later in Settings.';
-		} finally {
-			busy = '';
-		}
 	}
 
 	async function saveBudget() {
@@ -327,33 +305,8 @@
 				can skip this and connect later in Settings — making and practising with videos works
 				without it.
 			</p>
-			{#if youtubeUnavailable}
-				<p>
-					The YouTube connection could not be checked just now. Skip this step and connect later
-					in Settings.
-				</p>
-			{:else if youtube?.connected && youtube.needs_reconnect}
-				<p>
-					<strong>The connection has expired.</strong> Reconnect to carry on — nothing is lost.
-				</p>
-				<p>
-					<button class="btn" disabled={busy !== ''} onclick={connectYoutube}>
-						{busy === 'youtube' ? 'Opening sign-in…' : 'Reconnect YouTube'}
-					</button>
-				</p>
-			{:else if youtube?.connected}
-				<p>
-					Connected{#if youtube.channel_title}
-						to <strong>“{youtube.channel_title}”</strong>{/if}. Lovely — nothing more to do here.
-				</p>
-			{:else}
-				<p>
-					<button class="btn" disabled={busy !== ''} onclick={connectYoutube}>
-						{busy === 'youtube' ? 'Opening sign-in…' : 'Connect YouTube'}
-					</button>
-				</p>
-				<p class="muted small">Sign in with the Google account that owns your channel.</p>
-			{/if}
+			<YoutubeConnect disabled={busy !== ''} onChange={(next) => (youtube = next)} />
+			<p class="muted small">Sign in with the Google account that owns your channel.</p>
 		{:else if step === 2}
 			<h2>3. Create your first recipe</h2>
 			<p>

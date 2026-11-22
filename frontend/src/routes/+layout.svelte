@@ -3,7 +3,7 @@
 	import HelpDrawer from '$lib/components/HelpDrawer.svelte';
 	import { highlightElement } from '$lib/highlight';
 	import { practiceState, refreshPractice } from '$lib/practice.svelte';
-	import type { Snippet } from 'svelte';
+	import { onMount, type Snippet } from 'svelte';
 	import '../app.css';
 
 	let { children }: { children: Snippet } = $props();
@@ -11,12 +11,13 @@
 	let helpOpen = $state(false);
 	let menuOpen = $state(false);
 
-	// Shared practice state: settings writers update it on save, and this
-	// refresh on navigation keeps the last confirmed value if it fails.
+	// Practice state is read once here; settings writers update the
+	// shared value on every successful save from then on.
+	onMount(() => void refreshPractice());
+
 	$effect(() => {
 		void page.url.pathname;
 		menuOpen = false;
-		void refreshPractice();
 	});
 
 	$effect(() => {

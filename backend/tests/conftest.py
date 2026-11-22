@@ -39,13 +39,16 @@ def _guard(event: str, args: tuple) -> None:
 sys.addaudithook(_guard)
 
 
-def make_config(data_dir: Path, gemini_api_key: str = FAKE_GEMINI_KEY):
+def make_config(data_dir: Path, gemini_api_key: str = FAKE_GEMINI_KEY, **fields):
     from app.config import Config
 
     # Doc is silent on Config's shape: pydantic-settings class `Config` with these two fields.
     # S3: `run_worker=False` keeps the background loop off so tests drive every step themselves
     # (start-up recovery still runs). Until Config has the field, extra="ignore" drops it.
-    return Config(_env_file=None, gemini_api_key=gemini_api_key, data_dir=data_dir, run_worker=False)
+    # S5: `frontend_dir` is the built SPA FastAPI serves; by default tests point it at a folder
+    # that does not exist, so no test depends on whether frontend/build was built.
+    fields = {"run_worker": False, "frontend_dir": data_dir / "no-frontend-build", **fields}
+    return Config(_env_file=None, gemini_api_key=gemini_api_key, data_dir=data_dir, **fields)
 
 
 def call(fn, *args, **kwargs):

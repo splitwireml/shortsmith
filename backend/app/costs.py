@@ -12,7 +12,17 @@ from sqlalchemy import func
 from sqlmodel import Session, select
 
 from app import db
-from app.models import CostEvent, Pipeline, Settings, Snapshot, Stage, UnitKind, Video, VideoStatus
+from app.models import (
+    CostEvent,
+    Pipeline,
+    Settings,
+    Snapshot,
+    Stage,
+    UnitKind,
+    Video,
+    is_on_youtube,
+    latest_snapshot,
+)
 
 # Dollars per 1M tokens (research sections 1 and 3). Argon uses the
 # post-2026-12-01 rate from day one, so the ledger never understates.
@@ -228,19 +238,19 @@ def summary(session: Session, start: date, end: date) -> dict:
     snapshots: dict[int, list[Snapshot]] = {}
     for snap in session.exec(select(Snapshot)).all():
         snapshots.setdefault(snap.video_id, []).append(snap)
-    # Spend counts for every published video, views only where a snapshot
-    # exists yet; the ratio stays empty until some views are known.
+    # Spend counts for every video actually on YouTube, views only
+    # where a snapshot exists yet; the ratio stays empty until some
+    # views are known. Practice charges stay in the totals above.
     published_spend = 0.0
     latest_views = 0
     for video_id, usd in by_video.items():
         video = videos.get(video_id)
-        if video is None or video.status != VideoStatus.published:
+        if video is None or not is_on_youtube(video):
             continue
         published_spend += usd
-        snaps = snapshots.get(video_id, [])
-        if snaps:
-            # Latest snapshot wins; its views are a running total, not an increment.
-            latest = max(snaps, key=lambda s: (_as_utc(s.created_at), s.checkpoint_hours, s.id or 0))
+        latest = latest_snapshot(snapshots.get(video_id, []))
+        if latest is not None:
+            # Its views are a running total, not an increment.
             latest_views += latest.views
     cost_per_view = published_spend / latest_views if latest_views else None
 

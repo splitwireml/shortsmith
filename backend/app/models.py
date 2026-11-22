@@ -170,6 +170,26 @@ class CostEvent(SQLModel, table=True):
     reason: str = ""
 
 
+def is_on_youtube(video: "Video") -> bool:
+    """Whether the video really aired: published with a real YouTube id.
+
+    The one definition the scheduler, analyst, insights and costs all
+    share — practice uploads carry a `practice-…` id and never left
+    this laptop, so their “numbers” must not be reported or learned
+    from (their charges still stay in the ledger).
+    """
+    return (
+        VideoStatus(video.status) == VideoStatus.published
+        and bool(video.youtube_id)
+        and not video.youtube_id.startswith("practice-")  # type: ignore[union-attr]
+    )
+
+
+def latest_snapshot(snaps: list["Snapshot"]) -> "Snapshot | None":
+    """A video's current numbers: highest checkpoint, newest row breaks ties."""
+    return max(snaps, key=lambda s: (s.checkpoint_hours, s.id or 0)) if snaps else None
+
+
 class Snapshot(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     created_at: datetime = Field(default_factory=_now)

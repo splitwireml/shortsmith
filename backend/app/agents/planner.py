@@ -38,7 +38,10 @@ agent: Agent[None, VideoPlan] = Agent(
         "the first two seconds, a description, tags, a short style bible "
         "describing the look so every scene matches, a thumbnail prompt, and "
         "the scenes in order. Each scene is one clip with a visual prompt, "
-        "its length in seconds, and the narration line if any."
+        "its length in seconds, and the narration line if any. The narration "
+        "must fit inside its clip: keep it to about two words per second of "
+        "the scene (for example, at most six words in a 3-second clip), or "
+        "it will be cut off mid-sentence."
     ),
 )
 

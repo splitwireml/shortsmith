@@ -109,6 +109,26 @@ def test_summary_maths(session):
     assert s["cost_per_view"] == approx(0.006)
 
 
+def test_cost_per_view_ignores_practice_uploads(session):
+    # Practice charges stay in the totals, but a video that never aired
+    # must not move cost per view.
+    cats = make_pipeline(session)
+    real = make_video(session, cats, "Real", status="published")
+    practice = make_video(session, cats, "Practice", status="published")
+    practice.youtube_id = "practice-abc"
+    session.add(practice)
+    session.commit()
+    spend(session, 1.00, video=real, when=at(2026, 3, 2, 12))
+    spend(session, 9.00, video=practice, when=at(2026, 3, 2, 12))
+    snapshot(session, real, 24, 100, at(2026, 3, 3, 12))
+    snapshot(session, practice, 24, 10_000, at(2026, 3, 3, 12))
+
+    s = costs.summary(session, date(2026, 3, 1), date(2026, 3, 31))
+
+    assert s["total_usd"] == approx(10.00)  # both charges are in the ledger totals
+    assert s["cost_per_view"] == approx(0.01)  # $1 of real spend ÷ 100 real views
+
+
 def test_month_to_date_and_projection_ignore_the_requested_range(session):
     v = make_video(session, make_pipeline(session))
     now = datetime.now(UTC)

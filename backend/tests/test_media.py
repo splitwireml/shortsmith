@@ -35,7 +35,10 @@ class _Rejected(Exception):
     code = 403  # like google.genai.errors.APIError for a bad key
 
 
-def _install(monkeypatch, *, image_data=b"", video=None, models_exc=None) -> dict:
+def _install(
+    monkeypatch, *, image_data=b"", video=None, models_exc=None,
+    file_state="ACTIVE", download_data=b"clip-bytes",
+) -> dict:
     seen: dict = {}
 
     class Interactions:
@@ -55,9 +58,17 @@ def _install(monkeypatch, *, image_data=b"", video=None, models_exc=None) -> dic
                 raise models_exc
             return object()
 
+    class Files:
+        async def get(self, *, name):
+            return SimpleNamespace(state=SimpleNamespace(name=file_state))
+
+        async def download(self, *, file):
+            return download_data
+
     class Aio:
         def __init__(self):
             self.interactions = Interactions()
+            self.files = Files()
 
         async def aclose(self):
             pass
@@ -95,6 +106,31 @@ def test_thumbnail_png_passes_through_unchanged(tmp_path, monkeypatch):
         )
     )
     assert out.data == png  # already PNG: no conversion
+
+
+def test_clip_downloads_through_the_files_api(tmp_path, monkeypatch):
+    _install(monkeypatch, video=SimpleNamespace(uri="files/abc", data=None))
+    out = asyncio.run(
+        media.generate_clip(
+            "p", 3, settings=Settings(practice_mode=False), config=_config(tmp_path)
+        )
+    )
+    assert (out.data, out.units) == (b"clip-bytes", 3.0)
+
+
+def test_clip_that_fails_preparation_is_paid_but_not_delivered(tmp_path, monkeypatch):
+    # The provider accepted the job, so the seconds are charged even
+    # though no file arrives; the distinct type lets the pipeline
+    # record the cost before failing.
+    _install(
+        monkeypatch, video=SimpleNamespace(uri="files/abc", data=None), file_state="FAILED"
+    )
+    with pytest.raises(media.PaidButNotDelivered, match="could not finish"):
+        asyncio.run(
+            media.generate_clip(
+                "p", 3, settings=Settings(practice_mode=False), config=_config(tmp_path)
+            )
+        )
 
 
 def test_clip_without_a_uri_is_an_error(tmp_path, monkeypatch):

@@ -1,9 +1,10 @@
 """Insights: the lessons and the per-video numbers (L3).
 
 A video row's numbers come from its latest snapshot (highest
-checkpoint); only published videos are listed. All of the recipe's
-lessons are listed, switched-off ones too, so they can be switched
-back on. Without `pipeline_id`, everything is listed.
+checkpoint); only videos actually on YouTube are listed (practice
+uploads never aired). All of the recipe's lessons are listed,
+switched-off ones too, so they can be switched back on. Without
+`pipeline_id`, everything is listed.
 """
 
 from fastapi import APIRouter, Depends, HTTPException, Response
@@ -11,7 +12,7 @@ from pydantic import BaseModel
 from sqlmodel import Session, col, select
 
 from app.db import get_session
-from app.models import CostEvent, Lesson, Snapshot, Video, VideoStatus
+from app.models import CostEvent, Lesson, Snapshot, Video, VideoStatus, is_on_youtube, latest_snapshot
 
 router = APIRouter()
 
@@ -42,8 +43,10 @@ def insights(pipeline_id: int | None = None, session: Session = Depends(get_sess
 
     rows = []
     for video in session.exec(video_query).all():
+        if not is_on_youtube(video):
+            continue
         snaps = session.exec(select(Snapshot).where(Snapshot.video_id == video.id)).all()
-        latest = max(snaps, key=lambda s: (s.checkpoint_hours, s.id or 0)) if snaps else None
+        latest = latest_snapshot(snaps)
         cost = sum(
             e.cost_usd
             for e in session.exec(select(CostEvent).where(CostEvent.video_id == video.id)).all()

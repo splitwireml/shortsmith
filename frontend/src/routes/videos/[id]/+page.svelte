@@ -2,13 +2,15 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import { api } from '$lib/api';
-	import BarList from '$lib/components/BarList.svelte';
 	import Field from '$lib/components/Field.svelte';
-	import Money from '$lib/components/Money.svelte';
 	import StatusBadge from '$lib/components/StatusBadge.svelte';
+	import VideoCosts from '$lib/components/VideoCosts.svelte';
+	import VideoNumbers from '$lib/components/VideoNumbers.svelte';
+	import VideoPlan from '$lib/components/VideoPlan.svelte';
+	import VideoReview from '$lib/components/VideoReview.svelte';
 	import { plainDate, timeAgo } from '$lib/format';
 	import { practiceState, refreshPractice } from '$lib/practice.svelte';
-	import { stageLabel, statusExplanation } from '$lib/status';
+	import { statusExplanation } from '$lib/status';
 	import type { Pipeline, Video, VideoDetail } from '$lib/types';
 	import { onMount } from 'svelte';
 
@@ -64,28 +66,6 @@
 		}
 		return statusExplanation(video.status);
 	});
-	const totalCost = $derived(
-		video ? video.cost_events.reduce((sum, event) => sum + event.cost_usd, 0) : 0
-	);
-	const costByStage = $derived.by(() => {
-		if (!video) return [];
-		const totals = new Map<string, number>();
-		for (const event of video.cost_events) {
-			totals.set(event.stage, (totals.get(event.stage) ?? 0) + event.cost_usd);
-		}
-		return [...totals.entries()]
-			.map(([stage, usd]) => ({ id: stage, label: stageLabel(stage), usd }))
-			.sort((a, b) => b.usd - a.usd);
-	});
-
-	function checkpointWords(hours: number): string {
-		if (hours === 1) return '1 hour later';
-		if (hours < 24) return `${hours} hours later`;
-		if (hours === 24) return '1 day later';
-		if (hours === 168) return '1 week later';
-		if (hours === 672) return '4 weeks later';
-		return `${Math.round(hours / 24)} days later`;
-	}
 
 	async function load(silent = false) {
 		if (!videoId) return;
@@ -338,74 +318,9 @@
 			</section>
 		{/if}
 
-		<section class="card stack">
-			<h2>The plan it was made from</h2>
-			{#if video.plan}
-				{#if video.plan.hook}
-					<p><strong>Opening hook:</strong> {video.plan.hook}</p>
-				{/if}
-				{#if video.plan.description}
-					<p><strong>Words for YouTube:</strong> {video.plan.description}</p>
-				{/if}
-				{#if video.plan.tags && video.plan.tags.length > 0}
-					<p><strong>Labels:</strong> {video.plan.tags.join(', ')}</p>
-				{/if}
-				{#if video.plan.style_bible}
-					<p><strong>Look and feel:</strong> {video.plan.style_bible}</p>
-				{/if}
-				{#if video.plan.thumbnail_prompt}
-					<p><strong>Thumbnail idea:</strong> {video.plan.thumbnail_prompt}</p>
-				{/if}
-				{#if video.plan.scenes && video.plan.scenes.length > 0}
-					<h3>Scenes</h3>
-					<ol class="scene-list">
-						{#each video.plan.scenes as scene, index (index)}
-							<li>
-								<strong>Scene {index + 1}</strong>{#if scene.seconds}
-									({scene.seconds} seconds){/if}: {scene.prompt ?? ''}
-								{#if scene.narration}<br /><span class="muted">Says: “{scene.narration}”</span>{/if}
-							</li>
-						{/each}
-					</ol>
-				{/if}
-			{:else}
-				<p class="muted">No plan yet. The plan is written as the first step.</p>
-			{/if}
-			{#if video.clips.length > 0}
-				<h3>Clips</h3>
-				<ul>
-					{#each video.clips as clip (clip.id)}
-						<li>
-							Clip {clip.index + 1} — {clip.seconds} seconds —
-							{clip.storage_key ? 'made' : 'still to make'}
-						</li>
-					{/each}
-				</ul>
-			{/if}
-		</section>
+		<VideoPlan {video} />
 
-		<section class="card stack">
-			<h2>Quality check</h2>
-			{#if video.review}
-				{#if typeof video.review.score === 'number'}
-					<p><strong class="score">{video.review.score} out of 10</strong></p>
-				{/if}
-				{#if video.review.summary}
-					<p>{video.review.summary}</p>
-				{/if}
-				{#if video.review.bad_clips && video.review.bad_clips.length > 0}
-					<h3>Clips that were flagged</h3>
-					<ul>
-						{#each video.review.bad_clips as bad, index (index)}
-							<li>Clip {(bad.index ?? index) + 1}: {bad.problem ?? 'something looked wrong'}</li>
-						{/each}
-					</ul>
-					<p class="muted small">A flagged clip is made again once, then the video is checked a final time.</p>
-				{/if}
-			{:else}
-				<p class="muted">Not checked yet. The finished video is watched and scored out of 10.</p>
-			{/if}
-		</section>
+		<VideoReview {video} />
 
 		<section class="card stack" id="video-feedback">
 			<h2>What did you think?</h2>
@@ -443,66 +358,9 @@
 			</p>
 		</section>
 
-		<section class="card stack" id="video-cost">
-			<h2>What this video cost</h2>
-			<p>
-				Total so far: <strong><Money usd={totalCost} /></strong>
-			</p>
-			<BarList items={costByStage} emptyText="Nothing has been spent on this video yet." />
-			{#if video.cost_events.length > 0}
-				<div class="table-scroll">
-					<table class="data">
-						<thead>
-							<tr><th>Step</th><th>Why</th><th>When</th><th>Cost</th></tr>
-						</thead>
-						<tbody>
-							{#each video.cost_events as event (event.id)}
-								<tr>
-									<td>{stageLabel(event.stage)}</td>
-									<td>{event.reason || '—'}</td>
-									<td>{timeAgo(event.created_at)}</td>
-									<td><Money usd={event.cost_usd} /></td>
-								</tr>
-							{/each}
-						</tbody>
-					</table>
-				</div>
-			{/if}
-		</section>
+		<VideoCosts {video} />
 
-		{#if video.snapshots.length > 0}
-			<section class="card stack">
-				<h2>Viewer numbers</h2>
-				<div class="table-scroll">
-					<table class="data">
-						<thead>
-							<tr>
-								<th>When</th>
-								<th>Views</th>
-								<th>Likes</th>
-								<th>Comments</th>
-								<th>How much watched</th>
-							</tr>
-						</thead>
-						<tbody>
-							{#each video.snapshots as snapshot (snapshot.id)}
-								<tr>
-									<td>{checkpointWords(snapshot.checkpoint_hours)}</td>
-									<td>{snapshot.views}</td>
-									<td>{snapshot.likes}</td>
-									<td>{snapshot.comments}</td>
-									<td>
-										{snapshot.avg_view_percent !== null
-											? `${Math.round(snapshot.avg_view_percent)}% on average`
-											: 'Not yet known'}
-									</td>
-								</tr>
-							{/each}
-						</tbody>
-					</table>
-				</div>
-			</section>
-		{/if}
+		<VideoNumbers {video} />
 
 		<section class="card">
 			<h2>Delete this video</h2>
@@ -530,12 +388,4 @@
 		border: 1px solid var(--line);
 	}
 
-	.score {
-		font-size: 1.4rem;
-	}
-
-	.scene-list {
-		margin: 0;
-		padding-left: 1.4rem;
-	}
 </style>

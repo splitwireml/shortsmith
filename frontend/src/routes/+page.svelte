@@ -4,7 +4,6 @@
 	import Money from '$lib/components/Money.svelte';
 	import SystemChecks from '$lib/components/SystemChecks.svelte';
 	import VideoCard from '$lib/components/VideoCard.svelte';
-	import { setPractice } from '$lib/practice.svelte';
 	import { IN_PROGRESS } from '$lib/status';
 	import type { CostsSummary, Pipeline, StatusResponse, Video } from '$lib/types';
 	import { onMount } from 'svelte';
@@ -32,16 +31,24 @@
 		return pipelines.find((pipeline) => pipeline.id === pipelineId)?.name ?? 'A recipe';
 	}
 
+	// Health (with its live Gemini lookup) is read once on arrival;
+	// the video lists below poll on their own every few seconds and
+	// never wait for it.
+	async function loadHealth() {
+		try {
+			status = await api.get<StatusResponse>('/status');
+		} catch {
+			status = null;
+		}
+	}
+
 	async function load(silent = false) {
 		if (!silent) loading = true;
 		try {
-			const [nextStatus, nextVideos, nextPipelines] = await Promise.all([
-				api.get<StatusResponse>('/status'),
+			const [nextVideos, nextPipelines] = await Promise.all([
 				api.get<Video[]>('/videos'),
 				api.get<Pipeline[]>('/pipelines')
 			]);
-			status = nextStatus;
-			setPractice(nextStatus.practice_mode);
 			videos = nextVideos;
 			pipelines = nextPipelines;
 			if (!makePipelineId && nextPipelines.length > 0) {
@@ -49,7 +56,7 @@
 			}
 			error = '';
 		} catch (caught) {
-			if (!silent || !status) {
+			if (!silent || videos.length === 0) {
 				error =
 					caught instanceof Error
 						? caught.message
@@ -83,6 +90,7 @@
 	}
 
 	onMount(() => {
+		void loadHealth();
 		void load();
 		const timer = setInterval(() => void load(true), 5000);
 		return () => clearInterval(timer);
@@ -102,7 +110,15 @@
 	{#if error}
 		<div class="error-box">
 			<p>{error}</p>
-			<p><button class="btn btn-small" onclick={() => void load()}>Try again</button></p>
+			<p>
+				<button
+					class="btn btn-small"
+					onclick={() => {
+						void load();
+						void loadHealth();
+					}}>Try again</button
+				>
+			</p>
 		</div>
 	{/if}
 

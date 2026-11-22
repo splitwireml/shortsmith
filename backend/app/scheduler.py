@@ -31,6 +31,7 @@ from app.models import (
     Stage,
     Video,
     VideoStatus,
+    is_on_youtube,
 )
 
 log = logging.getLogger(__name__)
@@ -89,11 +90,11 @@ async def take_due_snapshots(
     now = _utc(now or datetime.now(UTC))
     videos = session.exec(
         select(Video)
-        .where(Video.status == VideoStatus.published, col(Video.youtube_id).is_not(None))
+        .where(Video.status == VideoStatus.published)
         .order_by(col(Video.published_at), col(Video.id))
     ).all()
     for video in videos:
-        if video.published_at is None or (video.youtube_id or "").startswith("practice-"):
+        if video.published_at is None or not is_on_youtube(video):
             continue  # practice uploads never reached YouTube (V5)
         age_hours = (now - _utc(video.published_at)).total_seconds() / 3600
         due = [c for c in CHECKPOINT_HOURS if c <= age_hours]
@@ -212,7 +213,7 @@ async def run_due_analysis(
         session.commit()
 
 
-async def _advance_due_videos(session: Session, config: Config) -> None:
+async def advance_due_videos(session: Session, config: Config) -> None:
     while True:
         video = session.exec(
             select(Video)
@@ -229,19 +230,27 @@ async def _advance_due_videos(session: Session, config: Config) -> None:
             return  # no progress; never spin on one video
 
 
+async def tick(session: Session, config: Config) -> None:
+    """One pass of due work, in the worker's order.
+
+    Each step reads its own clock when it starts: draining the video
+    queue can take minutes, and a snapshot must be labelled by when
+    its counts are actually fetched. The daily clean-up decision
+    stays with `run_worker`.
+    """
+    create_due_videos(session)
+    await advance_due_videos(session, config)
+    await take_due_snapshots(session, config)
+    await run_due_analysis(session, config)
+
+
 async def run_worker(config: Config, engine: Engine) -> None:
     """The loop itself. One failure is logged; the loop keeps going."""
     last_clean: datetime | None = None
     while True:
         try:
             with Session(engine) as session:
-                # Each step reads its own clock when it starts: draining
-                # the video queue can take minutes, and a snapshot must
-                # be labelled by when its counts are actually fetched.
-                create_due_videos(session)
-                await _advance_due_videos(session, config)
-                await take_due_snapshots(session, config)
-                await run_due_analysis(session, config)
+                await tick(session, config)
                 # ponytail: in-memory daily timer — a restart just cleans
                 # again sooner, and cleaning twice is harmless.
                 now = datetime.now(UTC)

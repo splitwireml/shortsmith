@@ -34,6 +34,16 @@ class MediaResult:
     unit_kind: UnitKind
 
 
+class PaidButNotDelivered(RuntimeError):
+    """Google accepted the clip (and charges for it) but its bytes never arrived.
+
+    Raised only after a confirmed provider response, from the
+    wait/download path. The caller records the clip's cost, then
+    lets it propagate — the money was spent even though there is
+    no file to show for it.
+    """
+
+
 def _client(config: Config) -> genai.Client:
     return genai.Client(
         api_key=config.gemini_api_key.get_secret_value(),
@@ -194,7 +204,18 @@ async def generate_clip(
         video = interaction.output_video
         if video is None or not video.uri:
             raise RuntimeError("The video service did not return a clip. Press Retry to try again.")
-        data = await _download_video(client, video.uri)
+        # The provider has accepted the job, so the seconds are paid
+        # for from here on — even if preparing or downloading the
+        # file then fails.
+        try:
+            data = await _download_video(client, video.uri)
+        except Exception as exc:  # noqa: BLE001 — re-raised as the paid outcome
+            message = (
+                str(exc)
+                if isinstance(exc, RuntimeError) and str(exc)
+                else "The finished clip could not be downloaded. Press Retry to try again."
+            )
+            raise PaidButNotDelivered(message) from exc
     finally:
         await client.aio.aclose()
     return MediaResult(data=data, units=float(seconds), unit_kind=UnitKind.video_seconds)

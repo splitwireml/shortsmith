@@ -1,31 +1,17 @@
 <script lang="ts">
 	import { api } from '$lib/api';
 	import Field from '$lib/components/Field.svelte';
+	import YoutubeConnect from '$lib/components/YoutubeConnect.svelte';
 	import { setPractice } from '$lib/practice.svelte';
-	import type { Settings, YoutubeStatus } from '$lib/types';
-	import { waitForYoutube } from '$lib/youtube';
+	import type { Settings } from '$lib/types';
 	import { onMount } from 'svelte';
 
 	let form = $state<Settings | null>(null);
-	let youtube = $state<YoutubeStatus | null>(null);
-	let youtubeUnavailable = $state(false);
 	let loading = $state(true);
 	let loadError = $state('');
 	let saving = $state(false);
 	let saveError = $state('');
 	let notice = $state('');
-	let youtubeBusy = $state(false);
-	let youtubeMessage = $state('');
-
-	async function loadYoutube() {
-		try {
-			youtube = await api.get<YoutubeStatus>('/youtube/status');
-			youtubeUnavailable = false;
-		} catch {
-			youtube = null;
-			youtubeUnavailable = true;
-		}
-	}
 
 	async function load() {
 		loading = true;
@@ -39,7 +25,6 @@
 		} finally {
 			loading = false;
 		}
-		await loadYoutube();
 	}
 
 	async function save(event: SubmitEvent) {
@@ -77,43 +62,6 @@
 		}
 	}
 
-	async function connectYoutube() {
-		if (youtubeBusy) return;
-		youtubeBusy = true;
-		youtubeMessage = 'A Google sign-in page should open. Sign in there, then come back here.';
-		try {
-			await api.post('/youtube/connect');
-			// Sign-in finishes in the browser tab it opened; wait for it here.
-			youtubeMessage =
-				'Waiting for the Google sign-in to finish. This page updates itself when it lands.';
-			youtube = (await waitForYoutube()) ?? youtube;
-			youtubeUnavailable = youtube === null;
-			youtubeMessage =
-				youtube?.connected && !youtube.needs_reconnect
-					? 'YouTube is connected.'
-					: 'Signing in has not finished yet. Finish it in the Google tab, or press the button to try again.';
-		} catch {
-			youtubeMessage = 'YouTube could not be connected just now. Try again in a moment.';
-		} finally {
-			youtubeBusy = false;
-		}
-	}
-
-	async function disconnectYoutube() {
-		if (youtubeBusy) return;
-		youtubeBusy = true;
-		youtubeMessage = '';
-		try {
-			await api.post('/youtube/disconnect');
-			await loadYoutube();
-			youtubeMessage = 'YouTube has been disconnected. Nothing will be uploaded until you connect again.';
-		} catch {
-			youtubeMessage = 'YouTube could not be disconnected just now. Try again in a moment.';
-		} finally {
-			youtubeBusy = false;
-		}
-	}
-
 	onMount(load);
 </script>
 
@@ -141,51 +89,7 @@
 
 	<section class="card stack" id="youtube">
 		<h2>Your YouTube channel</h2>
-		{#if youtubeUnavailable}
-			<p>
-				The YouTube connection could not be checked just now. Everything
-				else on this page works as normal.
-			</p>
-			<p><button class="btn" id="youtube-connect" disabled>Connect YouTube</button></p>
-		{:else if youtube?.connected && youtube.needs_reconnect}
-			<p>
-				<strong>The connection has expired</strong>{#if youtube.channel_title}
-					for “{youtube.channel_title}”{/if}. This is normal now and then. Reconnect to carry on
-				publishing — nothing is lost.
-			</p>
-			<p class="row">
-				<button class="btn" id="youtube-connect" disabled={youtubeBusy} onclick={connectYoutube}>
-					{youtubeBusy ? 'Opening sign-in…' : 'Reconnect YouTube'}
-				</button>
-			</p>
-		{:else if youtube?.connected}
-			<p>
-				Connected{#if youtube.channel_title}
-					to <strong>“{youtube.channel_title}”</strong>{/if}. Videos you approve are uploaded to
-				this channel.
-			</p>
-			<p class="row">
-				<button class="btn" id="youtube-connect" disabled={youtubeBusy} onclick={connectYoutube}>
-					Reconnect
-				</button>
-				<button class="btn btn-danger" disabled={youtubeBusy} onclick={disconnectYoutube}>
-					Disconnect
-				</button>
-			</p>
-		{:else}
-			<p>
-				Not connected yet. Connect when you are ready to publish; you can make and practise with
-				videos first.
-			</p>
-			<p>
-				<button class="btn" id="youtube-connect" disabled={youtubeBusy} onclick={connectYoutube}>
-					{youtubeBusy ? 'Opening sign-in…' : 'Connect YouTube'}
-				</button>
-			</p>
-		{/if}
-		{#if youtubeMessage}
-			<p>{youtubeMessage}</p>
-		{/if}
+		<YoutubeConnect showDisconnect />
 	</section>
 
 	{#if form}

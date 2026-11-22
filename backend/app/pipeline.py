@@ -24,12 +24,13 @@ from sqlmodel import Session, col, select
 from app import costs, db, media, stitch, youtube
 from app.agents import planner, reviewer
 from app.config import Config
-from app.models import ApprovalMode, Clip, Pipeline, Stage, Video, VideoStatus
+from app.models import ApprovalMode, Clip, Pipeline, Stage, UnitKind, Video, VideoStatus
 from app.storage import Storage
 
-# ponytail: flat reserve for a review. The real token cost is cents and
-# unknowable before the call, so reserve a dime instead of estimating.
-REVIEW_RESERVE_USD = 0.10
+# ponytail: flat reserve for one text call (planning, review). The
+# real token cost is cents and unknowable before the call, so reserve
+# a dime instead of estimating.
+TEXT_RESERVE_USD = 0.10
 
 
 def _clip_key(video_id: int, index: int) -> str:
@@ -55,13 +56,18 @@ def _clips(session: Session, video: Video) -> list[Clip]:
 async def _plan(session: Session, video: Video, config: Config) -> VideoStatus:
     # Reserve the whole video up front: never spend even the planner's
     # cents on a video whose clips (dollars) would not fit the caps.
+    # In practice mode the media is free, so only the text call itself
+    # is reserved — a small cap must not block a practice run.
     settings = db.get_settings(session)
     recipe = session.get(Pipeline, video.pipeline_id)
-    upcoming = 0.0
-    if recipe is not None:
+    if settings.practice_mode:
+        upcoming = TEXT_RESERVE_USD
+    elif recipe is not None:
         upcoming = costs.estimate_video_usd(
             settings, recipe.target_seconds
         ) + costs.estimate_thumbnail_usd(settings)
+    else:
+        upcoming = 0.0
     costs.check_budget(session, video, upcoming_usd=upcoming)
     plan = await planner.plan_video(session, video, config)
     for old in _clips(session, video):
@@ -128,9 +134,26 @@ async def _generate(session: Session, video: Video, config: Config) -> VideoStat
             narration = (scenes[clip.index] or {}).get("narration") or ""
         if narration:
             prompt += f'\n\nNarration: "{narration}"'
-        made = await media.generate_clip(
-            prompt, clip.seconds, settings=settings, config=config, reference_image=thumb_bytes
-        )
+        try:
+            made = await media.generate_clip(
+                prompt, clip.seconds, settings=settings, config=config, reference_image=thumb_bytes
+            )
+        except media.PaidButNotDelivered:
+            # The clip was charged for but its file never arrived:
+            # the ledger still records it (C1), then the stage fails.
+            costs.record(
+                session,
+                stage=Stage.video,
+                model=settings.video_model,
+                reason=(
+                    f"Clip {clip.index + 1} of {len(clips)} — {clip.seconds} s of "
+                    "video (paid for, but the file never arrived)"
+                ),
+                units=float(clip.seconds),
+                unit_kind=UnitKind.video_seconds,
+                video=video,
+            )
+            raise
         key = _clip_key(video.id, clip.index)
         storage.put(key, made.data)
         clip.storage_key = key
@@ -154,7 +177,7 @@ async def _generate(session: Session, video: Video, config: Config) -> VideoStat
 
 
 async def _review(session: Session, video: Video, config: Config) -> VideoStatus:
-    costs.check_budget(session, video, upcoming_usd=REVIEW_RESERVE_USD)
+    costs.check_budget(session, video, upcoming_usd=TEXT_RESERVE_USD)
     storage = Storage(config.media_dir)
     final_key = _final_key(video.id)
     if not storage.exists(final_key):

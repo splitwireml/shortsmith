@@ -25,13 +25,16 @@ def add(session, *rows):
 def test_insights_lists_lessons_and_video_numbers_and_lessons_can_be_switched_off(client, session):
     now = datetime.now(UTC)
     cats, dogs = make_pipeline(session), make_pipeline(session, name="Dogs")
-    hit, fresh, _ = add(
+    hit, fresh, *_ = add(
         session,
         Video(pipeline_id=cats.id, status="published", title="Hit", youtube_id="yt-hit",
               published_at=now - timedelta(days=4)),
         Video(pipeline_id=cats.id, status="published", title="Fresh", youtube_id="yt-fresh",
               published_at=now - timedelta(hours=2)),
         Video(pipeline_id=cats.id, status="awaiting_approval", title="Draft"),
+        # A practice upload never aired, so it gets no performance row.
+        Video(pipeline_id=cats.id, status="published", title="Practice", youtube_id="practice-x",
+              published_at=now - timedelta(hours=1)),
     )
     add(session,
         Snapshot(video_id=hit.id, checkpoint_hours=24, views=100, likes=5, comments=1),

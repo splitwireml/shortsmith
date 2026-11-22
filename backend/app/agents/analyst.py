@@ -12,7 +12,7 @@ from sqlmodel import Session, col, select
 
 from app.agents.base import run_agent
 from app.config import Config
-from app.models import Lesson, Pipeline, Snapshot, Stage, Video, VideoStatus
+from app.models import Lesson, Pipeline, Snapshot, Stage, Video, VideoStatus, is_on_youtube, latest_snapshot
 
 
 class Analysis(BaseModel):
@@ -75,23 +75,16 @@ async def analyse_pipeline(session: Session, pipeline: Pipeline, config: Config)
     # Practice uploads never really aired; their numbers teach
     # nothing. Filtered here, before the limit, so a run of practice
     # videos cannot push the real ones out of the 20-video window.
-    videos = list(
-        session.exec(
-            select(Video)
-            .where(
-                Video.pipeline_id == pipeline.id,
-                Video.status == VideoStatus.published,
-                col(Video.youtube_id).is_(None) | ~col(Video.youtube_id).like("practice-%"),
-            )
-            .order_by(col(Video.published_at).desc(), col(Video.id).desc())
-            .limit(20)
-        ).all()
-    )
+    published = session.exec(
+        select(Video)
+        .where(Video.pipeline_id == pipeline.id, Video.status == VideoStatus.published)
+        .order_by(col(Video.published_at).desc(), col(Video.id).desc())
+    ).all()
+    videos = [video for video in published if is_on_youtube(video)][:20]
     rows: list[tuple[Video, Snapshot | None]] = []
     for video in videos:
         snaps = session.exec(select(Snapshot).where(Snapshot.video_id == video.id)).all()
-        latest = max(snaps, key=lambda s: (s.checkpoint_hours, s.id or 0)) if snaps else None
-        rows.append((video, latest))
+        rows.append((video, latest_snapshot(snaps)))
     lessons = list(
         session.exec(
             select(Lesson)

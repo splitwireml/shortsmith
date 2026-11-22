@@ -3,7 +3,9 @@ temporary folder; nothing is built at import time, so merely importing
 this module never reads `.env` or touches the real data folder.
 The lifespan runs start-up recovery (a video left mid-upload becomes
 a plain failure) and, unless `Config.run_worker` is off, the worker
-loop. Serving the built frontend arrives in S5.
+loop. When the frontend has been built it is served from the same
+process, with every unknown page falling back to its index.html;
+unknown API addresses stay JSON 404s.
 """
 
 import asyncio
@@ -14,8 +16,9 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 from sqlmodel import Session
+from starlette.responses import Response
 
 from app import db, pipeline, scheduler
 from app.api import costs, help, insights, media, pipelines, settings, status, videos, youtube
@@ -76,6 +79,29 @@ def create_app(config: Config | None = None) -> FastAPI:
         help.router,
     ):
         app.include_router(router, prefix="/api")
+
+    # The built frontend (adapter-static) is one index.html plus files
+    # under _app/: real files are served as they are and every other
+    # page gets index.html, so a link opened directly still works.
+    # Registered last, so /api routes win; an unknown /api address
+    # reaching here is a JSON 404, never the app page. With no build
+    # the app is API only and still starts.
+    index = config.frontend_dir / "index.html"
+    if index.is_file():
+        root = config.frontend_dir.resolve()
+
+        @app.get("/{full_path:path}", include_in_schema=False)
+        def serve_frontend(full_path: str) -> Response:
+            if full_path == "api" or full_path.startswith("api/"):
+                return JSONResponse(
+                    status_code=404,
+                    content={"detail": "That address could not be found."},
+                )
+            candidate = (root / full_path).resolve()
+            if candidate.is_relative_to(root) and candidate.is_file():
+                return FileResponse(candidate)
+            return FileResponse(index)
+
     return app
 
 

@@ -154,7 +154,7 @@
 	{
 		"id": "recipe-estimate",
 		"title": "The cost estimate on the recipe form",
-		"body": "The estimate shows roughly what one video from this recipe will cost, and roughly what a month of them adds up to at the pace you chose. Making the moving clips is nearly all of the cost, at about seven cents per second of video. Planning, the thumbnail picture and the quality check add a few cents more.",
+		"body": "The estimate shows roughly what one video from this recipe will cost, and roughly what a month of them adds up to at the pace you chose. Making the moving clips is nearly all of the cost: clips are charged per second, at the picture size chosen in Settings. Planning, the thumbnail picture and the quality check add a few cents more.",
 		"pages": ["/pipelines/new", "/pipelines/[id]", "/costs"],
 		"keywords": ["estimate", "cost", "price", "month", "much"],
 		"show_me": { "href": "/pipelines/new", "highlight": "field-estimate" }
@@ -242,7 +242,7 @@
 	{
 		"id": "why-video-costs-most",
 		"title": "Why the clips cost nearly everything",
-		"body": "Making moving pictures is charged by the second, about seven cents a second at the usual size, so a 30-second video costs about two dollars in clips alone. Planning, the thumbnail and the quality check are a few cents each. Shortening a recipe's videos is the surest way to spend less.",
+		"body": "Making moving pictures is charged per second, at the picture size chosen in Settings, so every extra second of a video adds to its cost and the clips are nearly all of it. Planning, the thumbnail and the quality check are a few cents each. Shortening a recipe's videos is the surest way to spend less.",
 		"pages": ["/costs", "/pipelines/new"],
 		"keywords": ["expensive", "second", "cheaper", "nearly all"],
 		"show_me": { "href": "/costs", "highlight": "costs-by-stage" }
