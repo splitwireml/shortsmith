@@ -23,6 +23,9 @@ New tester, coder and reviewer for every sprint; kill and remove the old ones
   trusting*: `hc keys <t> down down enter`, confirm with `hc read <t> --lines 0` that the
   prompt is showing, then `hc send <t> "<task>"` (the launch task is lost to the dialog).
   Do not choose "Trust all" — that is the owner's decision, and the workers run fine without it.
+- A worker may open on a "do you trust this folder?" dialog for this repo. Accept it (this is
+  the owner's own project), then send the task. Any other permission or trust prompt: decline
+  or pick the option that grants nothing.
 - Wait with `hc wait --children any`, never sleep or poll.
 - Workers must not start agents of their own.
 
