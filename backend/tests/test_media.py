@@ -83,7 +83,7 @@ def test_thumbnail_jpeg_becomes_png(tmp_path, monkeypatch):
         )
     )
     assert out.data.startswith(b"\x89PNG")
-    assert seen["create"]["response_format"]["delivery"] == "inline"
+    assert "delivery" not in seen["create"]["response_format"]  # 400 if sent; inline is default
 
 
 def test_thumbnail_png_passes_through_unchanged(tmp_path, monkeypatch):

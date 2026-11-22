@@ -210,13 +210,12 @@ async def generate_thumbnail(prompt: str, *, settings: Settings, config: Config)
         interaction = await client.aio.interactions.create(
             model=settings.image_model,
             input=prompt,
-            # 1K is the size the price table charges per image; inline is
-            # the one delivery path for pictures (video uses uri instead).
+            # 1K is the size the price table charges per image; inline
+            # base64 is the default — sending a delivery key is a 400.
             response_format={
                 "type": "image",
                 "aspect_ratio": "9:16",
                 "image_size": "1K",
-                "delivery": "inline",
             },
             timeout=float(TIMEOUT_SECONDS),
         )

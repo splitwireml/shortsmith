@@ -15,7 +15,9 @@ Sources: official docs fetched today + source of installed packages (`uv run --w
 | No custom thumbnails for Shorts via API | `thumbnails.set` supports Shorts since **2026-11-03**. [thumbnails.set](https://developers.google.com/youtube/v3/docs/thumbnails/set) |
 | Latest google-genai everywhere | `pydantic-ai-slim[google]==2.71.0` pins `google-genai<3,>=2.30.0`; PyPI latest is 3.6.1. A shared venv resolves to 2.34.x (verified: it has `client.interactions` and the video `response_format`). |
 
-**Confirmed 2026-11-22** with the free call `client.models.get(...)` on our key: `gemini-omni-1.2-flash` resolves (so do `gemini-nano-banana-2.1`, `gemini-4-hydrogen`, `gemini-4-argon`). Use `gemini-omni-1.2-flash`; never the preview ID. A real generation call is still untested.
+**Confirmed 2026-11-22** with the free call `client.models.get(...)` on our key: `gemini-omni-1.2-flash` resolves (so do `gemini-nano-banana-2.1`, `gemini-4-hydrogen`, `gemini-4-argon`). Use `gemini-omni-1.2-flash`; never the preview ID.
+
+**Live calls during the build (2026-11-22, through the app, recorded in its ledger):** planner via Pydantic AI on `gemini-4-hydrogen` (high) with structured output works — 494 in / 1,960 out tokens, $0.0154, 15 s. Thumbnail `gemini-nano-banana-2.1` via Interactions (9:16, 1K, no `delivery` key) works, $0.0336. Omni `gemini-omni-1.2-flash` 3 s 720p 9:16 clip via Interactions with `delivery: "uri"` + Files download works, $0.2085; thumbnail + clip + download + stitch took 59 s together. Review on `gemini-4-argon` (high) of the 3 s stitched video sent inline works: 929 in / 381 out tokens, $0.0113, 15 s — its note: the planned narration line was longer than the clip and got cut off (keep narration to roughly 2 words per second of clip).
 
 ## 1. Video generation: Gemini Omni 1.2 Flash
 
@@ -95,6 +97,7 @@ interaction = client.interactions.create(
 png = base64.b64decode(interaction.output_image.data)
 ```
 
+- **Verified live 2026-11-22:** do not send a `delivery` key for images — `"delivery": "inline"` gets `400 invalid_request: "Image delivery mode is not supported."` Inline base64 is the only (default) image delivery.
 - Legacy equivalent: `client.models.generate_content(model=..., contents=[prompt], config=types.GenerateContentConfig(image_config=types.ImageConfig(aspect_ratio="9:16", image_size="2K")))`, then `part.as_image()` for each part in `response.parts` with `inline_data`.
 - `aspect_ratio` includes `"9:16"` and `"16:9"` (also 1:1, 2:3, 3:2, 3:4, 4:3, 4:5, 5:4, 21:9, 1:4, 4:1, 1:8, 8:1). Default: 1:1 or the input image's ratio.
 - `image_size`: `"1K" | "2K" | "4K"`, uppercase K required. 2.1 sizes: 9:16 = 768x1376 / 1536x2752 / 3072x5504; 16:9 = 1376x768 / 2752x1536 / 5504x3072.
