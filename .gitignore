@@ -1,0 +1,11 @@
+.env
+credentials.json
+token*.json
+data/
+.venv/
+__pycache__/
+node_modules/
+.svelte-kit/
+build/
+*.pyc
+.DS_Store
