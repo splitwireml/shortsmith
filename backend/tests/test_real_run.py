@@ -195,6 +195,9 @@ def test_refuses_while_the_app_is_running(real_run, fakes, config, session, caps
     listener = None
     try:
         listener = socket.socket()
+        # Without this, bind fails for ~30 s after the app stops (TIME_WAIT)
+        # and the test would find nothing answering on the port.
+        listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         listener.bind(("127.0.0.1", 8484))
         listener.listen(1)
     except OSError:
