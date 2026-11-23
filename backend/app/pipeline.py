@@ -85,7 +85,9 @@ async def _plan(session: Session, video: Video, config: Config) -> VideoStatus:
 
 
 async def _generate(session: Session, video: Video, config: Config) -> VideoStatus:
-    settings = db.get_settings(session)
+    # Snapshot, not the live row: commits in this pass would refresh it, so
+    # a switch flipped mid-pass must wait for the next pass.
+    settings = db.get_settings(session).model_copy()
     recipe = session.get(Pipeline, video.pipeline_id)
     if recipe is None:
         raise RuntimeError("This video's recipe could not be found, so its clips cannot be made.")
@@ -109,6 +111,12 @@ async def _generate(session: Session, video: Video, config: Config) -> VideoStat
         if thumb_missing:
             upcoming += costs.estimate_thumbnail_usd(settings)
     costs.check_budget(session, video, upcoming_usd=upcoming)
+    if settings.practice_mode and (missing or thumb_missing) and not video.practice:
+        # This video's media is practice media from here on, whatever the
+        # switch says later; saved at once so a later failure keeps it.
+        video.practice = True
+        session.add(video)
+        session.commit()
 
     # Thumbnail first: every clip call gets it as a subject reference, so
     # the clips look like one video.
@@ -247,7 +255,7 @@ async def _publish(session: Session, video: Video, config: Config) -> VideoStatu
         description=plan.get("description") or "",
         tags=list(plan.get("tags") or []),
         privacy=recipe.visibility.value,
-        practice=settings.practice_mode,
+        practice=settings.practice_mode or video.practice,
     )
     # The id is saved the moment YouTube hands it over, before any
     # thumbnail work: a restart during processing can no longer lose

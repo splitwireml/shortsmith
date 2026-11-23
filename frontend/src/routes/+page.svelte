@@ -4,6 +4,7 @@
 	import Money from '$lib/components/Money.svelte';
 	import SystemChecks from '$lib/components/SystemChecks.svelte';
 	import VideoCard from '$lib/components/VideoCard.svelte';
+	import { practiceState, refreshPractice } from '$lib/practice.svelte';
 	import { IN_PROGRESS } from '$lib/status';
 	import type { CostsSummary, Pipeline, StatusResponse, Video } from '$lib/types';
 	import { onMount } from 'svelte';
@@ -90,6 +91,7 @@
 	}
 
 	onMount(() => {
+		void refreshPractice();
 		void loadHealth();
 		void load();
 		const timer = setInterval(() => void load(true), 5000);
@@ -162,6 +164,12 @@
 					{making ? 'Starting…' : 'Make a video now'}
 				</button>
 			</p>
+			{#if practiceState.on}
+				<p>
+					Practice mode is on: the new video will use free coloured test clips, not real footage.
+					Turn practice mode off in <a href="/settings">Settings</a> to make a real video.
+				</p>
+			{/if}
 			<p class="muted small">
 				Shortsmith plans it, makes the clips and checks it. It then waits for your approval unless
 				the recipe says otherwise.

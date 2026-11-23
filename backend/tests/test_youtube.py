@@ -26,8 +26,8 @@ from app.db import get_settings
 from app.main import create_app
 from app.models import Video
 from app.storage import Storage
-from fakes import PLAN
-from test_engine import make_pipeline
+from fakes import PLAN, fake_text_agents
+from test_engine import advance_until_rest, make_pipeline, queue_video
 
 SCOPES = [
     "https://www.googleapis.com/auth/youtube.upload",
@@ -182,3 +182,36 @@ def test_fetch_stats_keeps_the_counts_when_analytics_fails(config, monkeypatch):
 
     assert youtube.fetch_stats(config, "yt-x", with_analytics=True) == {
         "views": 42, "likes": 7, "comments": 3}
+
+
+def test_a_practice_video_approved_after_practice_mode_is_off_never_reaches_youtube(
+    client, session, config, monkeypatch
+):
+    video = queue_video(session, make_pipeline(session))
+    with fake_text_agents():
+        advance_until_rest(session, video, config)  # made from free coloured practice clips
+    assert video.status == "awaiting_approval", video.error
+
+    settings = get_settings(session)
+    settings.practice_mode = False  # the owner switches practice off, then approves the old video
+    session.add(settings)
+    session.commit()
+    real_upload, sent_for_real = youtube.upload, []
+
+    def upload(config_, **kw):
+        if not kw.get("practice"):
+            sent_for_real.append(kw["title"])
+            return "yt-real-upload"
+        return real_upload(config_, **kw)  # the practice path: a fake id, no network
+
+    monkeypatch.setattr(youtube, "upload", upload)
+    monkeypatch.setattr(youtube, "set_thumbnail", lambda *args: None)
+
+    assert client.post(f"/api/videos/{video.id}/approve").status_code == 200
+    session.refresh(video)
+    asyncio.run(pipeline.advance(session, video, config))
+
+    session.refresh(video)
+    assert sent_for_real == []
+    assert video.status == "published", video.error
+    assert video.youtube_id.startswith("practice-")

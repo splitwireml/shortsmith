@@ -16,6 +16,7 @@
 	<p class="muted small">
 		{#if recipeName}{recipeName} · {/if}started {timeAgo(video.created_at)}
 		{#if video.is_test} · <span class="badge badge-needs">Test video</span>{/if}
+		{#if video.practice} · <span class="badge badge-needs">Practice</span>{/if}
 	</p>
 	{#if video.plan?.hook}
 		<p>{video.plan.hook}</p>

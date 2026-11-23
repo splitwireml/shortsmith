@@ -3,6 +3,7 @@ import re
 import shutil
 from collections import namedtuple
 
+import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import select
 
@@ -198,3 +199,47 @@ def test_old_database_gains_recipe_video_columns_and_planner_counts_clips(tmp_pa
     assert clip_range(old) == (3, 3)  # never under the model's 3 s
     old.target_seconds, old.clip_seconds = 48, 15  # 15 s ± 20% is 12-15 s: 3 clips stop at 45 s
     assert "Use 4 scenes" in brief_prompt(old, [], [])
+
+
+# interrupted: an earlier start-up added the column but stopped before marking the videos.
+@pytest.mark.parametrize("interrupted", [False, True], ids=["column-added", "column-already-there"])
+def test_old_database_gains_video_practice_and_old_practice_videos_are_marked(
+    tmp_path, interrupted
+):
+    from datetime import timedelta
+
+    from sqlalchemy import inspect, text
+    from sqlmodel import Session, SQLModel, create_engine
+
+    from app.db import init_db
+    from app.models import CostEvent, Pipeline, Video
+
+    engine = create_engine(f"sqlite:///{tmp_path / 'old.db'}")
+    SQLModel.metadata.create_all(engine)
+    with Session(engine) as session:
+        recipe = Pipeline.model_validate(PIPELINE)
+        session.add(recipe)
+        session.commit()
+        videos = [Video(pipeline_id=recipe.id, title=t) for t in ("practice", "real", "planned", "reused")]
+        session.add_all(videos)
+        session.commit()
+        practice, real, planned, reused = (v.id for v in videos)
+        session.add_all([  # free clips mean practice media; a free plan alone does not
+            CostEvent(video_id=practice, stage="video", model="m", cost_usd=0, reason="Clip"),
+            CostEvent(video_id=real, stage="video", model="m", cost_usd=0.21, reason="Clip"),
+            CostEvent(video_id=planned, stage="planning", model="m", cost_usd=0, reason="Plan"),
+            # A deleted video's free clip; its ledger row kept the id SQLite gave "reused".
+            CostEvent(video_id=reused, stage="video", model="m", cost_usd=0, reason="Clip",
+                      created_at=videos[3].created_at - timedelta(days=1)),
+        ])
+        session.commit()
+    if not interrupted and "practice" in {c["name"] for c in inspect(engine).get_columns("video")}:
+        with engine.begin() as conn:  # the video table as it was before the column
+            conn.execute(text("ALTER TABLE video DROP COLUMN practice"))
+
+    init_db(engine)
+    init_db(engine)  # every start-up runs it again
+
+    with engine.connect() as conn:
+        rows = conn.execute(text("SELECT id, practice FROM video ORDER BY id")).all()
+    assert rows == [(practice, 1), (real, 0), (planned, 0), (reused, 0)]

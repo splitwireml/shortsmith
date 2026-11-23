@@ -99,6 +99,7 @@ export interface Video {
 	pipeline_id: number;
 	status: VideoStatus;
 	is_test: boolean;
+	practice: boolean;
 	title: string;
 	plan: VideoPlan | null;
 	review: VideoReview | null;

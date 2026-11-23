@@ -125,6 +125,7 @@ class Video(SQLModel, table=True):
     pipeline_id: int = Field(foreign_key="pipeline.id")
     status: VideoStatus = VideoStatus.queued
     is_test: bool = False
+    practice: bool = False  # made from free practice clips; never uploaded for real
     title: str = ""
     plan: dict | None = Field(default=None, sa_column=Column(JSON))
     review: dict | None = Field(default=None, sa_column=Column(JSON))

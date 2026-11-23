@@ -58,11 +58,15 @@
 
 	const practiceUpload = $derived(video?.youtube_id?.startsWith('practice-') ?? false);
 	const practiceNow = $derived(practiceState.on);
+	const isPracticeVideo = $derived(video?.practice ?? false);
+	// Mirrors the publish rule: this video is practice, or practice mode
+	// is on now — either way approving never uploads it to YouTube.
+	const finishesAsPractice = $derived(isPracticeVideo || practiceNow);
 	const explanation = $derived.by(() => {
 		if (!video) return '';
 		if (practiceUpload) return 'Practice complete. Nothing was uploaded to YouTube.';
-		if (practiceNow && (video.status === 'approved' || video.status === 'publishing')) {
-			return 'Approved. In practice mode this finishes without uploading to YouTube.';
+		if (finishesAsPractice && (video.status === 'approved' || video.status === 'publishing')) {
+			return 'Approved. This finishes without uploading to YouTube.';
 		}
 		return statusExplanation(video.status);
 	});
@@ -115,8 +119,8 @@
 		act(
 			'approve',
 			() => api.post<Video>(`/videos/${videoId}/approve`),
-			practiceNow
-				? 'Approved. This practice video will finish without uploading to YouTube.'
+			finishesAsPractice
+				? 'Approved. This will finish without uploading to YouTube.'
 				: 'Approved. It will be published in a moment.'
 		);
 
@@ -212,6 +216,16 @@
 		</div>
 		<p class="lede">{explanation}</p>
 
+		{#if isPracticeVideo}
+			<div class="practice-notice">
+				<p>
+					<strong>This is a practice video.</strong> Its clips are plain coloured test clips, not
+					real footage, and it will never be uploaded to YouTube. To make real videos, turn
+					practice mode off in <a href="/settings">Settings</a>.
+				</p>
+			</div>
+		{/if}
+
 		{#if video.status === 'failed' && video.error}
 			<section class="card stack">
 				<h2>Why it stopped</h2>
@@ -279,9 +293,11 @@
 			<section class="card card-primary stack">
 				<h2>Your decision</h2>
 				<p>
-					{practiceNow
-						? 'Practice mode is on: approving finishes this practice run and nothing is uploaded to YouTube. Reject throws it away.'
-						: 'Approve publishes this video. Reject throws it away.'}
+					{isPracticeVideo
+						? 'Approving finishes this practice run and nothing is uploaded to YouTube. Reject throws it away.'
+						: practiceNow
+							? 'Practice mode is on: approving finishes this practice run and nothing is uploaded to YouTube. Reject throws it away.'
+							: 'Approve publishes this video. Reject throws it away.'}
 				</p>
 				<p>
 					<button
@@ -292,9 +308,11 @@
 					>
 						{busy === 'approve'
 							? 'Approving…'
-							: practiceNow
+							: isPracticeVideo
 								? 'Approve practice video'
-								: 'Approve and publish'}
+								: practiceNow
+									? 'Approve (nothing uploaded)'
+									: 'Approve and publish'}
 					</button>
 				</p>
 				<div id="reject-video" class="stack">
@@ -375,6 +393,18 @@
 </div>
 
 <style>
+	.practice-notice {
+		background: var(--amber-bg);
+		border: 1px solid var(--amber-line);
+		border-radius: 10px;
+		color: var(--amber-ink);
+		padding: 0.75rem 1rem;
+	}
+
+	.practice-notice p {
+		margin: 0;
+	}
+
 	.player {
 		width: min(22rem, 100%);
 		aspect-ratio: 9 / 16;

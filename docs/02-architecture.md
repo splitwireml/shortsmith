@@ -67,9 +67,9 @@ All tables have `id` (int, primary key) and `created_at`.
   each clip may be that % shorter or longer), every_days, videos_per_run, approval_mode (manual|auto),
   auto_approve_score=8, visibility (private|unlisted|public), extra_notes, active,
   last_run_at`.
-- **Video**: `pipeline_id, status, is_test, title, plan (JSON), review (JSON),
+- **Video**: `pipeline_id, status, is_test, practice, title, plan (JSON), review (JSON),
   review_rounds, error, failed_status, youtube_id, published_at, rating (-1|0|1),
-  media_deleted_at`.
+  media_deleted_at`. `practice` records that the media was made in practice mode.
 - **Clip**: `video_id, index, prompt, seconds, storage_key (null until generated)`.
   To regenerate a clip, set `storage_key` to null; "generate" only makes clips without one.
   That single rule gives both V3 and V4.
@@ -179,7 +179,9 @@ Each starts with `if settings.practice_mode: return _practice_clip(...)`, which 
 coloured test clip with ffmpeg's `lavfi` source (free, instant, no network). `youtube.upload`
 does the same and returns a fake id starting with `practice-`. Practice results are recorded
 as cost events of $0 so the UI still has something to show. Text agents are not faked in
-practice mode — they cost cents and make the practice run meaningful.
+practice mode — they cost cents and make the practice run meaningful. Generating in
+practice mode also sets `Video.practice`; publish treats such a video as practice
+whatever the switch says now, so its coloured clips never reach YouTube.
 
 ## Storage (`storage.py`)
 

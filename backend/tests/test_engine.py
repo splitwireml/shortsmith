@@ -17,9 +17,9 @@ from types import SimpleNamespace
 
 import pytest
 from pytest import approx
-from sqlmodel import select
+from sqlmodel import Session, select
 
-from app import media, pipeline
+from app import media, pipeline, stitch
 from app.db import get_settings
 from app.models import Clip, CostEvent, Lesson, Pipeline, UnitKind, Video
 from fakes import BETTER_PROMPT, GOOD_REVIEW, PLAN, fake_text_agents, flag_clip
@@ -343,3 +343,65 @@ def test_auto_approve_above_the_score(session, config, score, status):
         advance_until_rest(session, video, config)
 
     assert video.status == status, video.error
+
+
+def test_a_video_made_in_practice_mode_remembers_it(client, session, config):
+    video = queue_video(session, make_pipeline(session))  # practice mode is on by default
+
+    with fake_text_agents():
+        advance_until_rest(session, video, config)
+
+    assert video.status == "awaiting_approval", video.error
+    assert video.practice is True
+    assert client.get(f"/api/videos/{video.id}").json()["practice"] is True
+    assert [v["practice"] for v in client.get("/api/videos").json()] == [True]
+
+
+@pytest.mark.parametrize("switched_on_mid_pass", [False, True])
+def test_a_video_made_with_practice_off_is_not_practice(
+    client, session, config, monkeypatch, switched_on_mid_pass
+):
+    settings = get_settings(session)
+    settings.practice_mode = False
+    session.add(settings)
+    session.commit()
+    clips_saw_practice = []
+
+    # Practice is off: these stubs are the only way out, never the paid media calls.
+    async def thumbnail(*args, **kwargs):
+        if switched_on_mid_pass:  # the owner turns practice on in Settings during this pass
+            with Session(session.get_bind()) as other:
+                get_settings(other).practice_mode = True
+                other.commit()
+        return media.MediaResult(data=b"fake-png", units=1.0, unit_kind=UnitKind.images)
+
+    async def clip(*args, **kwargs):
+        clips_saw_practice.append(kwargs["settings"].practice_mode)
+        return media.MediaResult(data=b"fake-mp4", units=3.0, unit_kind=UnitKind.video_seconds)
+
+    monkeypatch.setattr(media, "generate_thumbnail", thumbnail)
+    monkeypatch.setattr(media, "generate_clip", clip)
+    monkeypatch.setattr(stitch, "stitch", lambda paths, out, resolution: out.write_bytes(b"final"))
+    video = queue_video(session, make_pipeline(session))
+
+    with fake_text_agents():
+        asyncio.run(pipeline.advance(session, video, config))  # plan
+        asyncio.run(pipeline.advance(session, video, config))  # generate
+
+    session.refresh(video)
+    assert video.status == "reviewing", video.error
+    assert video.practice is False
+    assert client.get(f"/api/videos/{video.id}").json()["practice"] is False
+    # A flip takes effect on the next pass: this one stays real clips, paid for in the ledger.
+    assert clips_saw_practice == [False, False, False]
+    assert all(e.cost_usd > 0 for e in events_for(session, video) if e.stage == "video")
+
+    if switched_on_mid_pass:
+        # Practice is on now, but a pass that only re-joins the real clips makes no practice media.
+        video.status = "generating"
+        session.add(video)
+        session.commit()
+        asyncio.run(pipeline.advance(session, video, config))
+        session.refresh(video)
+        assert video.status == "reviewing", video.error
+        assert video.practice is False
