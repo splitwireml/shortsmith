@@ -24,7 +24,10 @@ def _build_frontend() -> None:
     frontend = REPO_ROOT / "frontend"
     if (frontend / "build" / "index.html").is_file():
         return
-    if shutil.which("node") is None or shutil.which("pnpm") is None:
+    # The full path matters on Windows, where pnpm is a .cmd file that
+    # subprocess cannot find by name alone.
+    pnpm = shutil.which("pnpm")
+    if shutil.which("node") is None or pnpm is None:
         print(
             "The app's pages still need building, but Node or pnpm was "
             "not found on this computer. Install them, then start "
@@ -32,7 +35,7 @@ def _build_frontend() -> None:
         )
         return
     print("Building the app's pages (first start only)…")
-    for command in (["pnpm", "install", "--frozen-lockfile"], ["pnpm", "build"]):
+    for command in ([pnpm, "install", "--frozen-lockfile"], [pnpm, "build"]):
         if subprocess.run(command, cwd=frontend).returncode != 0:
             print(
                 "Building the app's pages did not finish, so Shortsmith "
