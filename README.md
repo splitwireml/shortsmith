@@ -112,3 +112,7 @@ its header before running it.
 
 Layout: `backend/app` (API, pipeline, agents), `backend/tests`,
 `frontend/src`, `docs/` (product, architecture, API research).
+
+## License
+
+MIT. See [LICENSE](LICENSE).
