@@ -59,7 +59,7 @@ def _as_utc(moment: datetime) -> datetime:
 def _price(
     model: str,
     *,
-    settings: Settings,
+    resolution: str | None,
     input_tokens: int,
     output_tokens: int,
     units: float,
@@ -71,11 +71,11 @@ def _price(
     cost = input_tokens * rates.get("input_per_1m", 0.0) / 1_000_000
     cost += output_tokens * rates.get("output_per_1m", 0.0) / 1_000_000
     if unit_kind == UnitKind.video_seconds:
-        tokens_per_second = VIDEO_TOKENS_PER_SECOND.get(settings.video_resolution.lower())
+        tokens_per_second = VIDEO_TOKENS_PER_SECOND.get((resolution or "").lower())
         if tokens_per_second is None or "video_output_per_1m" not in rates:
             raise ValueError(
                 f"Video cannot be priced for model {model!r} at "
-                f"resolution {settings.video_resolution!r}."
+                f"resolution {resolution!r}."
             )
         cost += units * tokens_per_second * rates["video_output_per_1m"] / 1_000_000
     elif unit_kind == UnitKind.images:
@@ -98,6 +98,7 @@ def record(
     video: Video | None = None,
     pipeline: Pipeline | None = None,
     free: bool = False,
+    resolution: str | None = None,
 ) -> CostEvent:
     """Write one cost event and commit at once (C1).
 
@@ -108,6 +109,9 @@ def record(
 
     `free` is practice media only (V5): the step still happened, so the
     units and reason are recorded, at $0. Text agents never pass it.
+
+    `resolution` is required for video seconds: the size the clip was
+    requested at, so editing the recipe mid-call cannot reprice it.
     """
     # Convert once, up front: a mistyped stage or unit kind fails here
     # instead of skipping a charge or writing a row nothing can read.
@@ -126,7 +130,7 @@ def record(
             if free
             else _price(
                 model,
-                settings=db.get_settings(session),
+                resolution=resolution,
                 input_tokens=input_tokens,
                 output_tokens=output_tokens,
                 units=units,
@@ -144,11 +148,11 @@ def record(
     return event
 
 
-def estimate_video_usd(settings: Settings, seconds: float) -> float:
-    """What `seconds` of video will cost, for the pre-spend budget check (C3)."""
+def estimate_video_usd(settings: Settings, seconds: float, resolution: str) -> float:
+    """What `seconds` of video at `resolution` will cost, for the pre-spend budget check (C3)."""
     return _price(
         settings.video_model,
-        settings=settings,
+        resolution=resolution,
         input_tokens=0,
         output_tokens=0,
         units=seconds,
@@ -160,7 +164,7 @@ def estimate_thumbnail_usd(settings: Settings) -> float:
     """What one thumbnail will cost, for the pre-spend budget check (C3)."""
     return _price(
         settings.image_model,
-        settings=settings,
+        resolution=None,
         input_tokens=0,
         output_tokens=0,
         units=1,

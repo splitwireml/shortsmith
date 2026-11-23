@@ -54,7 +54,7 @@ def fakes(monkeypatch, config, session):
     async def thumbnail(prompt, **kwargs):
         return media.MediaResult(data=b"fake-png", units=1.0, unit_kind=UnitKind.images)
 
-    def stitched(clip_paths, output_path):
+    def stitched(clip_paths, output_path, *args):
         Path(output_path).parent.mkdir(parents=True, exist_ok=True)
         Path(output_path).write_bytes(b"fake-final")
 

@@ -10,7 +10,7 @@ or run. Requirement IDs (P1, V2, C3…) refer to `docs/01-product.md`.
 |---|---|---|
 | Language / tooling | Python 3.13, `uv` | Pin 3.13 in `pyproject.toml` (3.14 wheels are not universal yet). |
 | API | FastAPI + uvicorn | — |
-| Data | SQLite through SQLModel | Table classes double as API schemas. `create_all` at start-up, no migrations. |
+| Data | SQLite through SQLModel | Table classes double as API schemas. `create_all` at start-up; `db.init_db` adds the few columns added since v1. |
 | Text agents | **Pydantic AI** | Planner, reviewer, analyst, helper. Typed outputs, built-in usage numbers, offline test models. |
 | Video + image generation | **google-genai**, only inside `media.py` | Pydantic AI does not generate video. One file owns the SDK. |
 | Stitching | `ffmpeg` via `subprocess` | Already on the machine. |
@@ -60,10 +60,11 @@ All tables have `id` (int, primary key) and `created_at`.
 - **Settings** (exactly one row): `monthly_budget_usd=30`, `per_video_cap_usd=6`,
   `retention_days=14`, `max_storage_gb=5`, `practice_mode=True`, `onboarding_done=False`,
   and per role a model and effort: `planner_model/effort`, `reviewer_model/effort`,
-  `analyst_model/effort`, `helper_model/effort`, `video_model`, `video_resolution="720p"`,
+  `analyst_model/effort`, `helper_model/effort`, `video_model`,
   `image_model` (defaults below).
 - **Pipeline**: `name, niche, objective, audience, region_notes, genre, art_style,
-  target_seconds, every_days, videos_per_run, approval_mode (manual|auto),
+  target_seconds, video_resolution="1080p", clip_seconds=15 (3-15), clip_buffer_pct=10 (0-20,
+  each clip may be that % shorter or longer), every_days, videos_per_run, approval_mode (manual|auto),
   auto_approve_score=8, visibility (private|unlisted|public), extra_notes, active,
   last_run_at`.
 - **Video**: `pipeline_id, status, is_test, title, plan (JSON), review (JSON),
@@ -87,7 +88,7 @@ All tables have `id` (int, primary key) and `created_at`.
 | reviewer | `gemini-4-argon` | high |
 | analyst | `gemini-4-hydrogen` | medium |
 | helper (help "ask", recipe suggestion) | `gemini-4-hydrogen` | low |
-| video | `gemini-omni-1.2-flash` (720p, 9:16) | — |
+| video | `gemini-omni-1.2-flash` (size per recipe, default 1080p; 9:16) | — |
 | thumbnail | `gemini-nano-banana-2.1` (the current Nano Banana 2 line; half the price of 2.0). `gemini-3-pro-image` = Nano Banana Pro, selectable in Advanced settings | — |
 
 All six ids were confirmed on the owner's API key with a free metadata call. Exact call shapes, effort

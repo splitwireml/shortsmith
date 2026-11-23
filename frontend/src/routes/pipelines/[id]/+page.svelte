@@ -40,7 +40,10 @@
 			approval_mode: source.approval_mode,
 			auto_approve_score: source.auto_approve_score,
 			visibility: source.visibility,
-			extra_notes: source.extra_notes
+			extra_notes: source.extra_notes,
+			video_resolution: source.video_resolution,
+			clip_seconds: source.clip_seconds,
+			clip_buffer_pct: source.clip_buffer_pct
 		};
 	}
 
@@ -57,7 +60,8 @@
 			void fetchEstimate(
 				nextPipeline.target_seconds,
 				nextPipeline.every_days,
-				nextPipeline.videos_per_run
+				nextPipeline.videos_per_run,
+				nextPipeline.video_resolution
 			)
 				.then((estimate) => (scheduleEstimate = estimate))
 				.catch(() => (scheduleEstimate = null));

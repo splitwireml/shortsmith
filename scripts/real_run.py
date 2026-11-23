@@ -44,6 +44,7 @@ from app.models import (  # noqa: E402
 
 LEDGER_LIMIT_USD = 10.0
 TARGET_SECONDS = 20  # two scenes of 10 s (see the recipe's extra notes)
+REAL_RUN_RESOLUTION = "720p"  # the size the test run's money limit was set for
 RECIPE_NAME = "Real-run test (one private Short)"
 _WORKING = (VideoStatus.queued, VideoStatus.generating, VideoStatus.reviewing)
 # Another video in one of these states is in flight; the run must not
@@ -98,6 +99,9 @@ def _create_recipe(session: Session) -> Pipeline:
         genre="Feel-good animal stories",
         art_style="Soft, friendly cartoon animals in bright colours",
         target_seconds=TARGET_SECONDS,
+        video_resolution=REAL_RUN_RESOLUTION,
+        clip_seconds=10,  # two 10 s scenes, exactly
+        clip_buffer_pct=0,
         every_days=7,
         videos_per_run=1,
         approval_mode=ApprovalMode.manual,
@@ -154,7 +158,7 @@ async def _run(config: Config) -> int:
                     ).one()
                 )
                 estimate = costs.estimate_video_usd(
-                    settings, TARGET_SECONDS
+                    settings, TARGET_SECONDS, REAL_RUN_RESOLUTION
                 ) + costs.estimate_thumbnail_usd(settings)
                 if ledger_total + estimate > LEDGER_LIMIT_USD:
                     return _refuse(

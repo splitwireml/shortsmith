@@ -60,13 +60,14 @@ def test_record_prices_each_call_and_survives_a_rollback(session):
     review = costs.record(session, stage="review", model="gemini-4-argon", reason="Watched it once",
                           input_tokens=100_000, output_tokens=10_000, video=v)
     clip = costs.record(session, stage="video", model="gemini-omni-1.2-flash",
-                        reason="1 clip × 10 s of video", units=10, unit_kind="video_seconds", video=v)
+                        reason="1 clip × 10 s of video", units=10, unit_kind="video_seconds", video=v,
+                        resolution="1080p")
     ask = costs.record(session, stage="help", model="gemini-4-hydrogen", reason="Answered a question",
                        input_tokens=1_000_000)
 
     assert plan.cost_usd == approx(0.03)  # Hydrogen $1.50 / $7.50 per 1M
     assert review.cost_usd == approx(0.60)  # Argon at the post-2026-12-01 rate, $4 / $20 per 1M
-    assert clip.cost_usd == approx(0.69504, rel=0.01)  # 720p: 5,792 tokens/s × $12 per 1M
+    assert clip.cost_usd == approx(1.04256, rel=0.01)  # 1080p: 8,688 tokens/s × $12 per 1M
     assert ask.cost_usd == approx(1.50)
     assert plan.reason == "Planned 1 video"
     assert (plan.video_id, plan.pipeline_id) == (v.id, v.pipeline_id)  # pipeline taken from the video
@@ -178,7 +179,7 @@ def test_cost_routes(client, session):
     costs.record(session, stage="planning", model="gemini-4-hydrogen", reason="Planned 1 video",
                  input_tokens=1_000_000, video=v)
     costs.record(session, stage="video", model="gemini-omni-1.2-flash", reason="1 clip × 10 s",
-                 units=10, unit_kind="video_seconds", video=v)
+                 units=10, unit_kind="video_seconds", video=v, resolution="1080p")
     costs.record(session, stage="help", model="gemini-4-hydrogen", reason="Answered a question",
                  output_tokens=1_000_000)
 
@@ -187,7 +188,7 @@ def test_cost_routes(client, session):
     assert all(e["reason"] and e["cost_usd"] > 0 for e in events)
 
     today = datetime.now(UTC).date()
-    expected = approx(1.50 + 0.69504 + 7.50, rel=0.01)
+    expected = approx(1.50 + 1.04256 + 7.50, rel=0.01)
     ranged = client.get("/api/costs/summary",
                         params={"start": today.replace(day=1).isoformat(), "end": today.isoformat()})
     assert ranged.json()["total_usd"] == expected

@@ -44,7 +44,6 @@ class SettingsUpdate(BaseModel):
     helper_model: str | None = None
     helper_effort: str | None = None
     video_model: str | None = None
-    video_resolution: str | None = None
     image_model: str | None = None
 
 
@@ -67,12 +66,6 @@ def update_settings(body: SettingsUpdate, session: Session = Depends(get_session
                 f"Shortsmith does not know the model “{data[field]}”. "
                 "Check the model name under Advanced settings.",
             )
-    if "video_resolution" in data and data["video_resolution"].lower() not in costs.VIDEO_TOKENS_PER_SECOND:
-        raise HTTPException(
-            422,
-            f"“{data['video_resolution']}” is not a video size Shortsmith can use. "
-            "Pick 360p, 720p, 1080p or 4k.",
-        )
     settings = get_settings(session)
     for field, value in data.items():
         setattr(settings, field, value)

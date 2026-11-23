@@ -6,8 +6,9 @@ CostEvent and Snapshot.
 
 from datetime import UTC, datetime
 from enum import Enum
+from typing import Literal
 
-from sqlalchemy import JSON, Column
+from sqlalchemy import JSON, Column, String
 from sqlmodel import Field, SQLModel
 
 
@@ -79,7 +80,6 @@ class Settings(SQLModel, table=True):
     helper_model: str = "gemini-4-hydrogen"
     helper_effort: str = "low"
     video_model: str = "gemini-omni-1.2-flash"
-    video_resolution: str = "720p"
     image_model: str = "gemini-nano-banana-2.1"
 
 
@@ -100,6 +100,10 @@ class PipelineBase(SQLModel):
     auto_approve_score: int = Field(default=8, ge=1, le=10)  # review scores run 1-10
     visibility: Visibility
     extra_notes: str = ""
+    # Literal checks the value; sa_type is needed because SQLModel cannot map a Literal.
+    video_resolution: Literal["360p", "720p", "1080p", "4k"] = Field(default="1080p", sa_type=String)
+    clip_seconds: int = Field(default=15, ge=3, le=15)  # the video model makes 3-15 s per clip
+    clip_buffer_pct: int = Field(default=10, ge=0, le=20)  # each clip may be this % shorter or longer
 
 
 class Pipeline(PipelineBase, table=True):

@@ -30,7 +30,12 @@ export interface PipelineInput {
 	auto_approve_score: number;
 	visibility: Visibility;
 	extra_notes: string;
+	video_resolution: VideoResolution;
+	clip_seconds: number;
+	clip_buffer_pct: number;
 }
+
+export type VideoResolution = '360p' | '720p' | '1080p' | '4k';
 
 export interface Pipeline extends PipelineInput {
 	id: number;
@@ -57,7 +62,6 @@ export interface Settings {
 	helper_model: string;
 	helper_effort: string;
 	video_model: string;
-	video_resolution: string;
 	image_model: string;
 }
 

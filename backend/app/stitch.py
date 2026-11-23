@@ -1,4 +1,4 @@
-"""Join clips into one vertical 1080×1920 MP4 with ffmpeg.
+"""Join clips into one vertical MP4 at the recipe's video size, with ffmpeg.
 
 Every clip is scaled and padded to the same frame, then joined with the
 concat filter so clips from separate calls (possibly different sizes)
@@ -25,12 +25,17 @@ def run_ffmpeg(args: list[str], what: str) -> None:
         raise RuntimeError(f"{what} failed. {detail[-1] if detail else 'Press Retry to try again.'}")
 
 
-def stitch(clip_paths: list[Path], output_path: Path) -> None:
+# Width × height of the vertical frame for each video size.
+FRAME_SIZES = {"360p": (360, 640), "720p": (720, 1280), "1080p": (1080, 1920), "4k": (2160, 3840)}
+
+
+def stitch(clip_paths: list[Path], output_path: Path, resolution: str = "1080p") -> None:
     if not clip_paths:
         raise RuntimeError("There are no clips to join together yet.")
+    w, h = FRAME_SIZES[resolution]
     frame = (
-        "scale=1080:1920:force_original_aspect_ratio=decrease,"
-        "pad=1080:1920:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=30"
+        f"scale={w}:{h}:force_original_aspect_ratio=decrease,"
+        f"pad={w}:{h}:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=30"
     )
     parts = []
     joined = ""

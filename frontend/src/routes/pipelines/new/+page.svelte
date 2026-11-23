@@ -22,7 +22,10 @@
 			approval_mode: 'manual',
 			auto_approve_score: 8,
 			visibility: 'private',
-			extra_notes: ''
+			extra_notes: '',
+			video_resolution: '1080p',
+			clip_seconds: 15,
+			clip_buffer_pct: 10
 		};
 	}
 

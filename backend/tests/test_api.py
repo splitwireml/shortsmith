@@ -15,6 +15,7 @@ PIPELINE = {
     "audience": "curious teens", "region_notes": "", "genre": "educational",
     "art_style": "bold cartoon", "target_seconds": 30, "every_days": 2, "videos_per_run": 1,
     "approval_mode": "manual", "auto_approve_score": 8, "visibility": "private", "extra_notes": "",
+    "clip_seconds": 3, "clip_buffer_pct": 0,  # matches the fake plan's 3 s scenes
 }
 DEFAULT_SETTINGS = {
     "monthly_budget_usd": 30, "per_video_cap_usd": 6, "retention_days": 14, "max_storage_gb": 5,
@@ -23,7 +24,7 @@ DEFAULT_SETTINGS = {
     "reviewer_model": "gemini-4-argon", "reviewer_effort": "high",
     "analyst_model": "gemini-4-hydrogen", "analyst_effort": "medium",
     "helper_model": "gemini-4-hydrogen", "helper_effort": "low",
-    "video_model": "gemini-omni-1.2-flash", "video_resolution": "720p",
+    "video_model": "gemini-omni-1.2-flash",
     "image_model": "gemini-nano-banana-2.1",
 }
 
@@ -65,13 +66,13 @@ def test_make_a_video_now_still_works_on_a_paused_recipe(client):
 def test_cost_estimate_for_the_recipe_form(client):
     from pytest import approx
 
-    # 720p defaults: 30 s of video + one thumbnail, twice every two days.
+    # 1080p defaults: 30 s of video + one thumbnail, twice every two days.
     estimate = client.get(
         "/api/costs/estimate",
         params={"seconds": 30, "every_days": 2, "videos_per_run": 2},
     )
     assert estimate.status_code == 200, estimate.text
-    assert estimate.json()["per_video_usd"] == approx(30 * 5792 * 12 / 1e6 + 0.0336)
+    assert estimate.json()["per_video_usd"] == approx(30 * 8688 * 12 / 1e6 + 0.0336)
     assert estimate.json()["per_month_usd"] == approx(estimate.json()["per_video_usd"] * 30)
 
 
@@ -160,3 +161,40 @@ def test_no_secret_in_any_response(config, monkeypatch):
         assert r.status_code == 200, f"{r.request.method} {r.request.url}: {r.text}"
         assert FAKE_GEMINI_KEY not in r.text, r.request.url
         assert token_secret not in r.text, r.request.url
+
+
+
+def test_old_database_gains_recipe_video_columns_and_planner_counts_clips(tmp_path):
+    from sqlalchemy import text
+    from sqlmodel import Session, SQLModel, create_engine
+
+    from app.agents.planner import brief_prompt, clip_range
+    from app.db import init_db
+    from app.models import Pipeline
+
+    engine = create_engine(f"sqlite:///{tmp_path / 'old.db'}")
+    SQLModel.metadata.create_all(engine)
+    with engine.begin() as conn:  # the recipe table as it was before these columns
+        for column in ("video_resolution", "clip_seconds", "clip_buffer_pct"):
+            conn.execute(text(f"ALTER TABLE pipeline DROP COLUMN {column}"))
+        conn.execute(text(
+            "INSERT INTO pipeline (name, niche, objective, audience, region_notes, genre, art_style,"
+            " target_seconds, every_days, videos_per_run, approval_mode, auto_approve_score,"
+            " visibility, extra_notes, created_at, active) VALUES ('old', 'n', 'o', 'a', '', 'g',"
+            " 's', 30, 1, 1, 'manual', 8, 'private', '', '2026-01-01', 1)"
+        ))
+    init_db(engine)
+    with Session(engine) as session:
+        old = session.get(Pipeline, 1)
+        assert (old.video_resolution, old.clip_seconds, old.clip_buffer_pct) == ("1080p", 15, 10)
+
+    old.target_seconds = 30
+    assert "Use 2 scenes" in brief_prompt(old, [], [])
+    assert clip_range(old) == (14, 15)  # 15 s ± 10%, never past the model's 15 s
+    old.clip_seconds, old.clip_buffer_pct = 10, 20
+    assert "Use 3 scenes" in brief_prompt(old, [], [])
+    assert clip_range(old) == (8, 12)
+    old.clip_seconds = 3
+    assert clip_range(old) == (3, 3)  # never under the model's 3 s
+    old.target_seconds, old.clip_seconds = 48, 15  # 15 s ± 20% is 12-15 s: 3 clips stop at 45 s
+    assert "Use 4 scenes" in brief_prompt(old, [], [])

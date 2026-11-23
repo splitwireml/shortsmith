@@ -64,7 +64,7 @@ async def _plan(session: Session, video: Video, config: Config) -> VideoStatus:
         upcoming = TEXT_RESERVE_USD
     elif recipe is not None:
         upcoming = costs.estimate_video_usd(
-            settings, recipe.target_seconds
+            settings, recipe.target_seconds, recipe.video_resolution
         ) + costs.estimate_thumbnail_usd(settings)
     else:
         upcoming = 0.0
@@ -86,6 +86,10 @@ async def _plan(session: Session, video: Video, config: Config) -> VideoStatus:
 
 async def _generate(session: Session, video: Video, config: Config) -> VideoStatus:
     settings = db.get_settings(session)
+    recipe = session.get(Pipeline, video.pipeline_id)
+    if recipe is None:
+        raise RuntimeError("This video's recipe could not be found, so its clips cannot be made.")
+    resolution = recipe.video_resolution
     storage = Storage(config.media_dir)
     clips = _clips(session, video)
     if not clips:
@@ -99,7 +103,9 @@ async def _generate(session: Session, video: Video, config: Config) -> VideoStat
     thumb_missing = not storage.exists(thumb_key)
     upcoming = 0.0
     if not settings.practice_mode:
-        upcoming = costs.estimate_video_usd(settings, sum(c.seconds for c in missing))
+        upcoming = costs.estimate_video_usd(
+            settings, sum(c.seconds for c in missing), resolution
+        )
         if thumb_missing:
             upcoming += costs.estimate_thumbnail_usd(settings)
     costs.check_budget(session, video, upcoming_usd=upcoming)
@@ -136,7 +142,12 @@ async def _generate(session: Session, video: Video, config: Config) -> VideoStat
             prompt += f'\n\nNarration: "{narration}"'
         try:
             made = await media.generate_clip(
-                prompt, clip.seconds, settings=settings, config=config, reference_image=thumb_bytes
+                prompt,
+                clip.seconds,
+                resolution=resolution,
+                settings=settings,
+                config=config,
+                reference_image=thumb_bytes,
             )
         except media.PaidButNotDelivered:
             # The clip was charged for but its file never arrived:
@@ -152,6 +163,7 @@ async def _generate(session: Session, video: Video, config: Config) -> VideoStat
                 units=float(clip.seconds),
                 unit_kind=UnitKind.video_seconds,
                 video=video,
+                resolution=resolution,
             )
             raise
         key = _clip_key(video.id, clip.index)
@@ -168,11 +180,12 @@ async def _generate(session: Session, video: Video, config: Config) -> VideoStat
             units=made.units,
             unit_kind=made.unit_kind,
             free=settings.practice_mode,
+            resolution=resolution,
             video=video,
         )
 
     paths = [storage.path(clip.storage_key) for clip in _clips(session, video)]
-    await asyncio.to_thread(stitch.stitch, paths, storage.path(_final_key(video.id)))
+    await asyncio.to_thread(stitch.stitch, paths, storage.path(_final_key(video.id)), resolution)
     return VideoStatus.reviewing
 
 

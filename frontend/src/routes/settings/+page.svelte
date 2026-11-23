@@ -49,7 +49,6 @@
 				helper_model: form.helper_model,
 				helper_effort: form.helper_effort,
 				video_model: form.video_model,
-				video_resolution: form.video_resolution,
 				image_model: form.image_model
 			});
 			setPractice(form.practice_mode);
@@ -238,16 +237,10 @@
 
 				<Field
 					label="Making the moving clips"
-					help="Makes each video clip. Starting name: gemini-omni-1.2-flash. Bigger sizes cost more per second; 720p is the usual choice."
+					help="Makes each video clip. Starting name: gemini-omni-1.2-flash. Video size and clip length are set on each recipe."
 					inputId="input-video-model"
 				>
 					<input id="input-video-model" bind:value={form.video_model} required />
-					<select aria-label="Video size" bind:value={form.video_resolution}>
-						<option value="360p">Size: 360p (cheapest)</option>
-						<option value="720p">Size: 720p (usual)</option>
-						<option value="1080p">Size: 1080p</option>
-						<option value="4k">Size: 4k (most costly)</option>
-					</select>
 				</Field>
 
 				<Field

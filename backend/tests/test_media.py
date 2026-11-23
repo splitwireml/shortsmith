@@ -112,7 +112,8 @@ def test_clip_downloads_through_the_files_api(tmp_path, monkeypatch):
     _install(monkeypatch, video=SimpleNamespace(uri="files/abc", data=None))
     out = asyncio.run(
         media.generate_clip(
-            "p", 3, settings=Settings(practice_mode=False), config=_config(tmp_path)
+            "p", 3, resolution="1080p", settings=Settings(practice_mode=False),
+                config=_config(tmp_path),
         )
     )
     assert (out.data, out.units) == (b"clip-bytes", 3.0)
@@ -128,7 +129,8 @@ def test_clip_that_fails_preparation_is_paid_but_not_delivered(tmp_path, monkeyp
     with pytest.raises(media.PaidButNotDelivered, match="could not finish"):
         asyncio.run(
             media.generate_clip(
-                "p", 3, settings=Settings(practice_mode=False), config=_config(tmp_path)
+                "p", 3, resolution="1080p", settings=Settings(practice_mode=False),
+                config=_config(tmp_path),
             )
         )
 
@@ -139,7 +141,8 @@ def test_clip_without_a_uri_is_an_error(tmp_path, monkeypatch):
     with pytest.raises(RuntimeError, match="did not return a clip"):
         asyncio.run(
             media.generate_clip(
-                "p", 3, settings=Settings(practice_mode=False), config=_config(tmp_path)
+                "p", 3, resolution="1080p", settings=Settings(practice_mode=False),
+                config=_config(tmp_path),
             )
         )
 

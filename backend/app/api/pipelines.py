@@ -47,7 +47,7 @@ def _get_or_404(session: Session, pipeline_id: int) -> Pipeline:
 
 @router.get("/presets")
 def list_presets() -> list[dict]:
-    return [dict(p) for p in PRESETS]
+    return [PipelineBase.model_validate(p).model_dump() for p in PRESETS]
 
 
 @router.get("/pipelines")

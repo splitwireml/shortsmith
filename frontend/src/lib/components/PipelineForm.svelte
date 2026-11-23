@@ -22,15 +22,16 @@
 	let estimateRun = 0;
 
 	// Priced by the server with its own price table; refreshed (debounced)
-	// whenever the length or pace changes.
+	// whenever the length, size or pace changes.
 	$effect(() => {
 		const seconds = Number(value.target_seconds);
 		const everyDays = Number(value.every_days);
 		const perRun = Number(value.videos_per_run);
+		const resolution = value.video_resolution;
 		if (!(seconds > 0 && everyDays >= 1 && perRun >= 1)) return;
 		const run = ++estimateRun;
 		const timer = setTimeout(() => {
-			fetchEstimate(seconds, everyDays, perRun)
+			fetchEstimate(seconds, everyDays, perRun, resolution)
 				.then((next) => {
 					if (run !== estimateRun) return;
 					estimate = next;
@@ -135,6 +136,53 @@
 			step="1"
 			required
 			bind:value={value.target_seconds}
+		/>
+	</Field>
+
+	<Field
+		label="Video size"
+		help="Bigger sizes look sharper and cost more per second. 1080p is the usual choice; the estimate below updates when you change it."
+		id="field-video-resolution"
+		inputId="input-video-resolution"
+	>
+		<select id="input-video-resolution" bind:value={value.video_resolution}>
+			<option value="360p">360p (cheapest)</option>
+			<option value="720p">720p</option>
+			<option value="1080p">1080p (usual)</option>
+			<option value="4k">4k (most costly)</option>
+		</select>
+	</Field>
+
+	<Field
+		label="Clip length (seconds, 3–15)"
+		help="A video is made of short clips joined together, and this sets how long each one is, so it decides how many clips a video needs: a 30-second video with 15-second clips is 2 clips. Longer clips mean fewer joins. The video maker cannot make more than 15 seconds at once."
+		id="field-clip-seconds"
+		inputId="input-clip-seconds"
+	>
+		<input
+			id="input-clip-seconds"
+			type="number"
+			min="3"
+			max="15"
+			step="1"
+			required
+			bind:value={value.clip_seconds}
+		/>
+	</Field>
+
+	<Field
+		label="Clip length leeway: ±{value.clip_buffer_pct}%"
+		help="Lets the planner make each clip a little shorter or longer than the length above, to suit the scene. 0% means every clip is exactly that length. Clips never go past 15 seconds."
+		id="field-clip-buffer"
+		inputId="input-clip-buffer"
+	>
+		<input
+			id="input-clip-buffer"
+			type="range"
+			min="0"
+			max="20"
+			step="1"
+			bind:value={value.clip_buffer_pct}
 		/>
 	</Field>
 

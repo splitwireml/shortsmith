@@ -3,6 +3,7 @@
 // prices of its own.
 
 import { api } from './api';
+import type { VideoResolution } from './types';
 
 export interface CostEstimate {
 	per_video_usd: number;
@@ -12,12 +13,14 @@ export interface CostEstimate {
 export function fetchEstimate(
 	seconds: number,
 	everyDays: number,
-	videosPerRun: number
+	videosPerRun: number,
+	resolution: VideoResolution
 ): Promise<CostEstimate> {
 	const params = new URLSearchParams({
 		seconds: String(seconds),
 		every_days: String(everyDays),
-		videos_per_run: String(videosPerRun)
+		videos_per_run: String(videosPerRun),
+		resolution
 	});
 	return api.get<CostEstimate>(`/costs/estimate?${params.toString()}`);
 }

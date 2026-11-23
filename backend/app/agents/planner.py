@@ -46,8 +46,37 @@ agent: Agent[None, VideoPlan] = Agent(
 )
 
 
+def clip_range(pipeline: Pipeline) -> tuple[int, int]:
+    """Shortest and longest clip allowed: the recipe's clip length ± its buffer.
+
+    Whole seconds inside the buffer, and never outside the 3-15 s the
+    video model can make.
+    """
+    base, pct = pipeline.clip_seconds, pipeline.clip_buffer_pct
+    shortest = -(-base * (100 - pct) // 100)  # ceiling, in whole numbers
+    longest = base * (100 + pct) // 100
+    return max(3, shortest), min(15, longest)
+
+
+def clip_count_for(pipeline: Pipeline) -> int:
+    """How many clips: the count whose possible total comes closest to the target.
+
+    Ties go to the count nearest target ÷ clip length.
+    """
+    shortest, longest = clip_range(pipeline)
+    target = pipeline.target_seconds
+
+    def miss(n: int) -> tuple[float, float]:
+        return (max(0, n * shortest - target, target - n * longest),
+                abs(n - target / pipeline.clip_seconds))
+
+    return min(range(1, target // 3 + 2), key=miss)
+
+
 def brief_prompt(pipeline: Pipeline, lessons: list[Lesson], titles: list[str]) -> str:
     """Everything the planner is shown, and nothing more (V2)."""
+    shortest, longest = clip_range(pipeline)
+    clip_count = clip_count_for(pipeline)
     lines = [
         f"Recipe: {pipeline.name}",
         f"Topic: {pipeline.niche}",
@@ -66,8 +95,10 @@ def brief_prompt(pipeline: Pipeline, lessons: list[Lesson], titles: list[str]) -
     lines += [f"- {title}" for title in titles] or ["- (none yet)"]
     lines += [
         "",
-        "Each scene is one clip of 3 to 15 whole seconds. Split the video "
-        "into enough scenes to reach the target length.",
+        f"Use {clip_count} scenes. Each scene is one clip of about "
+        f"{pipeline.clip_seconds} seconds: any whole number from {shortest} to "
+        f"{longest}, chosen to suit the scene. Together they should come close "
+        "to the target length.",
     ]
     return "\n".join(lines)
 
@@ -97,7 +128,7 @@ async def plan_video(session: Session, video: Video, config: Config) -> VideoPla
             .limit(15)
         ).all()
     )
-    return await run_agent(
+    plan = await run_agent(
         agent,
         brief_prompt(pipeline, lessons, titles),
         stage=Stage.planning,
@@ -106,3 +137,9 @@ async def plan_video(session: Session, video: Video, config: Config) -> VideoPla
         reason="Planned the video",
         video=video,
     )
+    # The prompt asks for this range; the clamp guarantees it. The scene
+    # count stays a request: dropping or inventing scenes would break the story.
+    shortest, longest = clip_range(pipeline)
+    for scene in plan.scenes:
+        scene.seconds = min(max(scene.seconds, shortest), longest)
+    return plan
